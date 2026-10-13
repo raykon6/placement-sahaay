@@ -1,6 +1,6 @@
 # Placement Sahaay
 
-A secure, policy-driven placement management system for the NFSU Placement Cell (2026–27 session), built for Problem Statement 2.
+A secure, policy-driven placement management system for the NFSU Placement Cell.
 
 It keeps course-wise student records, runs every application and offer through an explainable rule engine based on the Student Placement Guidelines, protects contact and compensation data, and writes every sensitive action to a tamper-evident audit trail.
 
