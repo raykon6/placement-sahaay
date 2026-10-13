@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% from "macros.html" import csrf, error_summary %}
+{% block title %}Policy settings{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Placement Administrator</p>
+    <h1>Policy settings</h1>
+    <p class="lede">Thresholds used by the rule engine. Every change requires a reference and is recorded with before and after values.</p>
+  </div>
+</div>
+<form class="form card card-body" method="post" novalidate>
+  {{ csrf() }}
+  {{ error_summary(errors) }}
+  <div class="form-grid">
+  {% for key, spec in specs.items() %}
+    {% set label, typ = spec[0], spec[1] %}
+    {% set err = errors.get(key) %}
+    <div class="field">
+      <label for="f-{{ key }}">{{ label }}</label>
+      {% if typ.__name__ == 'bool' %}
+        <select class="select" id="f-{{ key }}" name="{{ key }}"><option value="1"{% if form.get(key) in (true, '1') %} selected{% endif %}>Yes</option><option value="0"{% if form.get(key) in (false, '0') %} selected{% endif %}>No</option></select>
+      {% elif typ.__name__ == 'str' %}
+        <select class="select" id="f-{{ key }}" name="{{ key }}">
+          {% for opt, text in [('review', 'Refer to Placement Cell'), ('strict', 'Block (offer-type rule prevails)'), ('switching', 'Allow (switching rule prevails)')] %}
+          <option value="{{ opt }}"{% if form.get(key) == opt %} selected{% endif %}>{{ text }}</option>{% endfor %}
+        </select>
+      {% else %}
+        <input class="input" id="f-{{ key }}" name="{{ key }}" type="number" step="{{ '0.01' if typ.__name__ == 'float' else '1' }}" min="{{ spec[2] }}" max="{{ spec[3] }}" value="{{ form.get(key) }}" {% if err %}aria-invalid="true" aria-describedby="e-{{ key }}"{% endif %} required>
+      {% endif %}
+      {% if err %}<span class="error-text" id="e-{{ key }}">{{ err }}</span>{% endif %}
+    </div>
+  {% endfor %}
+    <div class="field span-2">
+      <label for="f-reason">Guideline reference or reason</label>
+      <input class="input" id="f-reason" name="reason" minlength="10" maxlength="300" required value="{{ form.get('reason', '') if form.get is defined else '' }}" {% if errors.get('reason') %}aria-invalid="true" aria-describedby="e-reason"{% endif %}>
+      {% if errors.get('reason') %}<span class="error-text" id="e-reason">{{ errors.reason }}</span>{% endif %}
+    </div>
+  </div>
+  <div class="form-actions"><button class="btn btn-primary" type="submit">Save policy</button><a class="btn btn-ghost" href="{{ url_for('policy.rules') }}">View rules</a></div>
+</form>
+{% endblock %}

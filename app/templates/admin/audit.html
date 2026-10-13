@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% from "macros.html" import csrf, pager %}
+{% block title %}Audit trail{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Governance</p>
+    <h1>Audit trail</h1>
+    <p class="lede">Append-only and hash-chained. Each entry's HMAC covers the previous entry's hash, so any edit, deletion or reordering is detectable.</p>
+  </div>
+  <form method="post" action="{{ url_for('admin.audit_verify') }}">{{ csrf() }}<button class="btn btn-primary" type="submit">Verify integrity</button></form>
+</div>
+{% if verification %}
+  {% if verification.ok %}
+  <div class="notice notice-ok" role="status"><strong>Chain intact.</strong> {{ verification.checked }} entries verified. Head hash <span class="hash">{{ verification.head }}</span></div>
+  {% else %}
+  <div class="notice notice-bad" role="alert"><strong>Tampering detected at entry #{{ verification.bad_id }}.</strong> {{ verification.reason }}. {{ verification.checked }} entries verified before the break.</div>
+  {% endif %}
+  <div class="divider"></div>
+{% endif %}
+<form class="filters" method="get" role="search" aria-label="Filter audit entries">
+  <div class="field"><label for="fa">Action starts with</label><input class="input" id="fa" name="action" value="{{ action }}" placeholder="e.g. student. or auth." maxlength="40"></div>
+  <div class="field"><label for="fu">Actor</label><input class="input" id="fu" name="actor" value="{{ actor }}" maxlength="40"></div>
+  <div class="actions"><button class="btn btn-primary" type="submit">Filter</button><a class="btn btn-ghost" href="{{ url_for('admin.audit_log') }}">Reset</a></div>
+</form>
+<div class="card">
+  <div class="table-wrap">
+    <table class="table">
+      <caption class="sr-only">{{ total }} audit entries, newest first</caption>
+      <thead><tr><th scope="col">#</th><th scope="col">Time</th><th scope="col">Actor</th><th scope="col">Action</th><th scope="col">Entity</th><th scope="col">Detail</th><th scope="col">Hash</th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td class="mono small">{{ r.id }}</td>
+          <td class="small nowrap">{{ r.ts|ist }}</td>
+          <td>{{ r.actor }}<span class="sub">{{ r.role }}{% if r.ip %} · {{ r.ip }}{% endif %}</span></td>
+          <td class="mono small">{{ r.action }}</td>
+          <td class="small">{{ r.entity or '—' }}{% if r.entity_id %} <span class="mono">{{ r.entity_id }}</span>{% endif %}</td>
+          <td><span class="hash">{{ r.detail|truncate(160) }}</span></td>
+          <td><span class="hash" title="{{ r.hash }}">{{ r.hash[:12] }}…</span></td>
+        </tr>
+      {% else %}<tr><td colspan="7"><div class="empty">No entries.</div></td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pager(page, pages, 'admin.audit_log', {'action': action, 'actor': actor}) }}
+</div>
+{% endblock %}

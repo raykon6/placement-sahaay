@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% from "macros.html" import csrf, status_badge, acceptance_badge, category, decision_panel %}
+{% block title %}{{ st.full_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="breadcrumb"><a href="{{ url_for('students.index') }}">Students</a> / <span class="mono">{{ st.placement_id }}</span></p>
+    <h1>{{ st.full_name }}</h1>
+    <p class="lede">{{ st.course|label('course_long') }} · Batch {{ st.batch }}
+      {% if st.archived %} · <span class="badge">Archived</span>{% endif %}{% if st.anonymized %} <span class="badge">Anonymised</span>{% endif %}</p>
+  </div>
+  <div class="actions">
+    {% if has_perm('offer.write') and not st.archived %}<a class="btn" href="{{ url_for('offers.create', pid=st.placement_id) }}">Record offer</a>{% endif %}
+    {% if can_edit %}<a class="btn btn-primary" href="{{ url_for('students.edit', student_id=st.id) }}">Edit record</a>{% endif %}
+  </div>
+</div>
+
+<div class="split">
+  <div class="stack-lg">
+    <section class="card" aria-labelledby="ov-h">
+      <div class="card-head"><h2 id="ov-h">Placement position</h2>{{ status_badge(status) }}</div>
+      <div class="card-body">
+        <dl class="dl">
+          <dt>Registration</dt><dd>{{ st.registration_status|label('registration') }}</dd>
+          <dt>Eligibility</dt><dd>{{ st.eligibility_status|label('eligibility') }}</dd>
+          <dt>CGPA</dt><dd>{{ st.cgpa if st.cgpa is not none else '—' }}</dd>
+          <dt>May still apply for</dt><dd><strong>{{ window.label }}</strong></dd>
+          {% if st.remarks %}<dt>Remarks</dt><dd>{{ st.remarks }}</dd>{% endif %}
+        </dl>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="of-h">
+      <div class="card-head"><div><h2 id="of-h">Offer history</h2><p>Offers are events and are never overwritten</p></div></div>
+      <div class="card-body tight table-wrap">
+        <table class="table">
+          <thead><tr><th scope="col">Company</th><th scope="col">Type</th><th scope="col">Cat.</th>
+            {% if has_perm('student.comp') %}<th scope="col" class="num">Package</th>{% endif %}
+            <th scope="col">Offer date</th><th scope="col">Acceptance</th><th scope="col">Joining</th></tr></thead>
+          <tbody>
+          {% for o in offers %}
+            <tr>
+              <td class="primary">{% if has_perm('offer.read') %}<a href="{{ url_for('offers.detail', offer_id=o.id) }}">{{ o.company_name }}</a>{% else %}{{ o.company_name }}{% endif %}
+                {% if o.off_campus %}<span class="sub">Off-campus · NOC {{ o.noc_status|label('noc')|lower }}</span>{% endif %}
+                {% if o.offer_type == 'I' and o.ppo_status != 'na' %}<span class="sub">PPO {{ o.ppo_status|label('ppo')|lower }}</span>{% endif %}</td>
+              <td><span class="badge plain">{{ o.offer_type|label('offer_type') }}</span></td>
+              <td>{{ category(o.category) }}</td>
+              {% if has_perm('student.comp') %}<td class="num nowrap">{% if o.ctc_lpa %}{{ o.ctc_lpa|lpa }}{% endif %}{% if o.stipend_amount %}<span class="sub">{{ o.stipend_amount|inr }}/{{ 'mo' if o.stipend_period == 'month' else 'total' }}</span>{% endif %}</td>{% endif %}
+              <td class="nowrap">{{ o.offer_date }}</td>
+              <td>{{ acceptance_badge(o.acceptance) }}{% if o.acceptance == 'pending' %}<span class="sub countdown" data-deadline="{{ o.deadline_at }}">{{ time_left(o.deadline_at) }}</span>{% endif %}</td>
+              <td>{{ o.joining|label('joining') }}</td>
+            </tr>
+          {% else %}<tr><td colspan="7"><div class="empty">No offers recorded.</div></td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="ck-h">
+      <h2 id="ck-h">Eligibility for open drives</h2>
+      <p class="muted small">Evaluated live by the policy engine against the current guideline settings.</p>
+      <div class="stack">
+        {% for c in checks %}
+          {{ decision_panel(c.decision, c.drive.company_name ~ ' — ' ~ c.drive.title,
+               (c.drive.offer_type|label('offer_type_long')) ~ (' · ' ~ (c.drive.ctc_lpa|lpa) ~ ' · Category ' ~ c.drive.category if c.drive.ctc_lpa else '') ~ ' · ' ~ c.drive.drive_date, uid='ck' ~ loop.index) }}
+        {% else %}<div class="notice">No open drives for this programme.</div>{% endfor %}
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="ap-h">
+      <div class="card-head"><h2 id="ap-h">Applications and attendance</h2></div>
+      <div class="card-body tight table-wrap">
+        <table class="table">
+          <thead><tr><th scope="col">Drive</th><th scope="col">Status</th><th scope="col">Applied</th></tr></thead>
+          <tbody>
+          {% for a in applications %}
+            <tr><td>{{ a.company_name }} <span class="sub">{{ a.title }}</span></td><td>{{ a.status|label('application') }}</td><td class="small">{{ a.created_at|ist }}</td></tr>
+          {% else %}<tr><td colspan="3"><div class="empty">No applications.</div></td></tr>{% endfor %}
+          </tbody>
+        </table>
+        {% if attendance %}
+        <table class="table">
+          <caption class="sr-only">Attendance</caption>
+          <thead><tr><th scope="col">Drive</th><th scope="col">Event</th><th scope="col">Attendance</th></tr></thead>
+          <tbody>
+          {% for a in attendance %}
+            <tr><td>{{ a.company_name }} <span class="sub">{{ a.drive_date }}</span></td><td>{{ a.event|label('event') }}</td>
+              <td>{% if a.status == 'absent' %}<span class="badge badge-block">Absent</span>{% elif a.status == 'excused' %}<span class="badge badge-review">Excused</span><span class="sub">{{ a.exception_reason }}</span>{% else %}<span class="badge badge-ok">Present</span>{% endif %}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+
+  <aside class="stack-lg">
+    <section class="card" aria-labelledby="ct-h">
+      <div class="card-head"><h2 id="ct-h">Contact</h2>{% if contact %}<span class="badge badge-review">Access logged</span>{% endif %}</div>
+      <div class="card-body stack">
+        {% if contact %}
+          <dl class="dl"><dt>Mobile</dt><dd class="mono">+91 {{ contact.mobile }}</dd><dt>Email</dt><dd class="mono">{{ contact.email }}</dd></dl>
+          <p class="small muted">This view was recorded in the audit trail. Contact details are hidden again when you leave this page.</p>
+        {% else %}
+          <dl class="dl"><dt>Mobile</dt><dd class="mono">{{ st.mobile_masked }}</dd><dt>Email</dt><dd class="mono">{{ st.email_masked }}</dd></dl>
+          {% if has_perm('student.contact') and not st.anonymized %}
+          <form method="post" action="{{ url_for('students.reveal_contact', student_id=st.id) }}">{{ csrf() }}
+            <button class="btn btn-sm" type="submit">Reveal contact details</button>
+          </form>
+          <p class="small muted">Revealing is recorded with your name and time.</p>
+          {% endif %}
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="fl-h">
+      <div class="card-head"><h2 id="fl-h">Policy flags</h2>{% if has_perm('flag.read') %}<a class="btn btn-sm" href="{{ url_for('policy.flags') }}">Queue</a>{% endif %}</div>
+      <ul class="timeline">
+        {% for f in flags %}
+          <li><strong>{{ f.kind|label('flag_kind') }}</strong> · <span class="badge plain">{{ f.status|capitalize }}</span><br><span class="small">{{ f.detail }}</span><br><span class="small muted">{{ f.created_at|ist }}</span>{% if f.resolution %}<br><span class="small">Decision: {{ f.resolution }}</span>{% endif %}</li>
+        {% else %}<li class="muted">No flags.</li>{% endfor %}
+      </ul>
+    </section>
+
+    {% if has_perm('student.archive') %}
+    <section class="card" aria-labelledby="lc-h">
+      <div class="card-head"><h2 id="lc-h">Record lifecycle</h2></div>
+      <div class="card-body stack">
+        <form class="form" method="post" action="{{ url_for('students.archive', student_id=st.id) }}" data-confirm="{{ 'Restore this record?' if st.archived else 'Archive this record? It will be excluded from active lists and reports.' }}" novalidate>
+          {{ csrf() }}
+          <div class="field"><label for="f-arch-reason">Reason</label><input class="input" id="f-arch-reason" name="reason" minlength="10" maxlength="300" required></div>
+          <button class="btn btn-sm" type="submit">{{ 'Restore record' if st.archived else 'Archive record' }}</button>
+        </form>
+        {% if has_perm('student.anonymize') and st.archived and not st.anonymized %}
+        <hr class="divider">
+        <form class="form" method="post" action="{{ url_for('students.anonymize', student_id=st.id) }}" data-confirm="Permanently remove this student's name and contact details? Statistics are kept. This cannot be undone." novalidate>
+          {{ csrf() }}
+          <div class="field"><label for="f-anon-reason">Retention reason</label><input class="input" id="f-anon-reason" name="reason" minlength="10" maxlength="300" required></div>
+          <button class="btn btn-sm btn-danger" type="submit">Anonymise personal data</button>
+        </form>
+        {% endif %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% if history %}
+    <section class="card" aria-labelledby="hi-h">
+      <div class="card-head"><h2 id="hi-h">Recent audit entries</h2><a class="btn btn-sm" href="{{ url_for('admin.audit_log') }}">All</a></div>
+      <ul class="timeline">
+        {% for h in history %}<li><span class="mono small">{{ h.action }}</span> · {{ h.actor }}<br><span class="small muted">{{ h.ts|ist }}</span></li>{% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

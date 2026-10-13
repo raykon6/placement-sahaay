@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block bare %}
+<div class="auth">
+  <section class="auth-aside hero" aria-label="Student Placement Cell, NFSU Gandhinagar">
+    <img class="hero-crest" src="{{ url_for('static', filename='img/nfsu-logo.png') }}" alt="" width="96" height="96">
+    <h1 class="hero-title">Student Placement Cell</h1>
+    <span class="hero-label">NFSU Gandhinagar</span>
+  </section>
+  <section class="auth-main">
+    <div class="auth-card">
+      <div>
+        <h2>Sign in</h2>
+        <p class="muted small mt-10">Use the account issued by the Placement Cell.</p>
+      </div>
+      {% if expired %}<div class="notice notice-warn" role="status">Your session ended due to inactivity. Please sign in again.</div>{% endif %}
+      {% if error %}<div class="error-summary" role="alert" tabindex="-1"><h2>Sign-in failed</h2><p class="small">{{ error }}</p></div>{% endif %}
+      <form class="form" method="post" action="{{ url_for('auth.login') }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+        <div class="field">
+          <label for="f-username">Username</label>
+          <input class="input" id="f-username" name="username" type="text" value="{{ username or '' }}" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="64" required autofocus>
+        </div>
+        <div class="field">
+          <label for="f-password">Password</label>
+          <div class="pw-wrap">
+            <input class="input" id="f-password" name="password" type="password" autocomplete="current-password" maxlength="128" required>
+            <button class="btn btn-ghost btn-sm pw-toggle" type="button" data-pw-toggle="f-password" aria-pressed="false" aria-label="Show password" hidden>Show</button>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+      </form>
+      <p class="small muted">Five failed attempts lock the account for 15 minutes. Sessions end after 15 minutes of inactivity.</p>
+    </div>
+  </section>
+</div>
+{% endblock %}

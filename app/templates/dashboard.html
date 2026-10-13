@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% from "macros.html" import category %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">2026–27 placement session</p>
+    <h1>{% if course %}{{ course|label('course_long') }}{% else %}University overview{% endif %}</h1>
+    <p class="lede">Unique placed students are counted separately from offers. Internship stipends and annual FTE CTC are reported separately.</p>
+  </div>
+  {% if g.user.role != 'coordinator' %}
+  <form class="actions" method="get" action="{{ url_for('main.dashboard') }}">
+    <label class="sr-only" for="course-filter">Programme</label>
+    <select class="select" id="course-filter" name="course">
+      <option value="">All programmes</option>
+      {% for k, v in COURSES.items() %}<option value="{{ k }}"{% if course == k %} selected{% endif %}>{{ v }}</option>{% endfor %}
+    </select>
+    <button class="btn" type="submit">Apply</button>
+  </form>
+  {% endif %}
+</div>
+
+<h2 class="sr-only">Key figures</h2>
+<dl class="kpis">
+  <div class="kpi"><dt>Registered</dt><dd>{{ stats.registered }}<small>of {{ stats.total }} on record</small></dd></div>
+  <div class="kpi"><dt>Eligible</dt><dd>{{ stats.eligible }}<small>{{ stats.pending_verification }} pending verification</small></dd></div>
+  <div class="kpi"><dt>Ineligible</dt><dd>{{ stats.ineligible }}<small>&nbsp;</small></dd></div>
+  <div class="kpi"><dt>Placed (unique)</dt><dd>{{ stats.placed }}<small>{% if stats.registered %}{{ (100 * stats.placed / stats.registered)|round|int }}% of registered{% else %}—{% endif %}</small></dd></div>
+  <div class="kpi"><dt>Unplaced</dt><dd>{{ stats.unplaced }}<small>registered, no accepted offer</small></dd></div>
+  <div class="kpi"><dt>Offers issued</dt><dd>{{ stats.total_offers }}<small>to {{ stats.unique_students_with_offers }} students</small></dd></div>
+</dl>
+
+<div class="grid grid-2 section">
+  <section class="card" aria-labelledby="mix-h">
+    <div class="card-head"><div><h2 id="mix-h">Placement status</h2><p>Registered students by accepted-offer type</p></div></div>
+    <div class="card-body">
+      {% set sc = stats.status_counts %}{% set tot = stats.registered or 1 %}
+      <div class="stacked" role="img" aria-label="Internship plus PPO or FTE {{ sc.internship_fte }}, FTE only {{ sc.fte }}, internship only {{ sc.internship }}, unplaced {{ sc.unplaced }}">
+        <span class="s1" data-pct="{{ 100 * sc.internship_fte / tot }}"></span>
+        <span class="s2" data-pct="{{ 100 * sc.fte / tot }}"></span>
+        <span class="s3" data-pct="{{ 100 * sc.internship / tot }}"></span>
+        <span class="s4" data-pct="{{ 100 * sc.unplaced / tot }}"></span>
+      </div>
+      <div class="legend">
+        <span><i class="s1"></i>Internship + PPO/FTE · {{ sc.internship_fte }}</span>
+        <span><i class="s2"></i>FTE only · {{ sc.fte }}</span>
+        <span><i class="s3"></i>Internship only · {{ sc.internship }}</span>
+        <span><i class="s4"></i>Unplaced · {{ sc.unplaced }}</span>
+      </div>
+      <hr class="divider">
+      <div class="grid grid-2">
+        <div>
+          <h4>Annual FTE CTC</h4>
+          <dl class="dl small">
+            <dt>Highest</dt><dd>{{ stats.fte.highest|lpa }}</dd>
+            <dt>Average</dt><dd>{{ stats.fte.average|lpa }}</dd>
+            <dt>Median</dt><dd>{{ stats.fte.median|lpa }}</dd>
+            <dt>FTE offers</dt><dd>{{ stats.fte.count }}</dd>
+          </dl>
+        </div>
+        <div>
+          <h4>Monthly internship stipend</h4>
+          <dl class="dl small">
+            <dt>Highest</dt><dd>{{ stats.stipend.highest|inr }}</dd>
+            <dt>Average</dt><dd>{{ stats.stipend.average|inr }}</dd>
+            <dt>Median</dt><dd>{{ stats.stipend.median|inr }}</dd>
+            <dt>Internships</dt><dd>{{ stats.stipend.count }}</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="att-h">
+    <div class="card-head">
+      <div><h2 id="att-h">Needs attention</h2><p>Pending responses and policy cases</p></div>
+      <a class="btn btn-sm" href="{{ url_for('policy.flags') }}">Review queue</a>
+    </div>
+    <div class="card-body tight">
+      <dl class="kpis">
+        <div class="kpi"><dt>Awaiting acceptance</dt><dd>{{ stats.pending_acceptance }}</dd></div>
+        <div class="kpi"><dt>Joining pending</dt><dd>{{ stats.pending_joining }}</dd></div>
+        <div class="kpi"><dt>Open policy flags</dt><dd>{{ stats.open_flags }}</dd></div>
+      </dl>
+      {% if pending %}
+      <div class="table-wrap">
+        <table class="table">
+          <caption class="sr-only">Offers awaiting acceptance, soonest deadline first</caption>
+          <thead><tr><th scope="col">Student</th><th scope="col">Company</th><th scope="col">Deadline</th></tr></thead>
+          <tbody>
+          {% for p in pending %}
+            <tr>
+              <td class="primary">{% if has_perm('offer.read') %}<a href="{{ url_for('offers.detail', offer_id=p.id) }}">{{ p.full_name }}</a>{% else %}{{ p.full_name }}{% endif %}<span class="sub mono">{{ p.placement_id }}</span></td>
+              <td>{{ p.company }} <span class="badge plain">{{ p.offer_type|label('offer_type') }}</span></td>
+              <td><span class="countdown" data-deadline="{{ p.deadline_at }}">{{ time_left(p.deadline_at) }}</span></td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}<div class="empty"><strong>No pending offers</strong>All issued offers have a response.</div>{% endif %}
+    </div>
+  </section>
+</div>
+
+<section class="section card" aria-labelledby="course-h">
+  <div class="card-head"><div><h2 id="course-h">Course- and batch-wise outcomes</h2><p>Placed = registered students with at least one accepted offer</p></div></div>
+  <div class="card-body tight table-wrap">
+    <table class="table">
+      <thead><tr><th scope="col">Programme</th><th scope="col">Batch</th><th scope="col" class="num">Registered</th><th scope="col" class="num">Placed</th><th scope="col">Placement rate</th><th scope="col" class="num">I</th><th scope="col" class="num">F</th><th scope="col" class="num">I+PPO/F</th><th scope="col" class="num">Offers</th></tr></thead>
+      <tbody>
+      {% for r in stats.groups %}
+        {% set rate = (100 * r.placed / r.registered) if r.registered else 0 %}
+        <tr>
+          <th scope="row">{{ r.course|label('course') }}</th>
+          <td class="mono">{{ r.batch }}</td>
+          <td class="num">{{ r.registered }}</td>
+          <td class="num">{{ r.placed }}</td>
+          <td><div class="bar-row compact"><span class="bar-track"><span class="bar-fill" data-pct="{{ rate }}"></span></span><span class="val">{{ rate|round|int }}%</span></div></td>
+          <td class="num">{{ r.internship }}</td>
+          <td class="num">{{ r.fte }}</td>
+          <td class="num">{{ r.internship_fte }}</td>
+          <td class="num">{{ r.offers }}</td>
+        </tr>
+      {% else %}<tr><td colspan="9"><div class="empty">No students on record.</div></td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="grid grid-2 section">
+  <section class="card" aria-labelledby="co-h">
+    <div class="card-head"><div><h2 id="co-h">Company-wise offers</h2><p>Category derived from CTC by the policy engine</p></div></div>
+    <div class="card-body tight table-wrap">
+      <table class="table">
+        <thead><tr><th scope="col">Company</th><th scope="col">Category</th><th scope="col">Types</th><th scope="col" class="num">Max CTC</th><th scope="col" class="num">Offers</th></tr></thead>
+        <tbody>
+        {% for c in stats.companies %}
+          <tr><th scope="row">{{ c.name }}</th>
+              <td>{% for cat in c.categories|sort %}{{ category(cat) }} {% else %}<span class="muted">Internship</span>{% endfor %}</td>
+              <td>{% for t in c.types|sort %}<span class="badge plain">{{ t|label('offer_type') }}</span> {% endfor %}</td>
+              <td class="num">{{ c.max_ctc|lpa }}</td><td class="num">{{ c.offers }}</td></tr>
+        {% else %}<tr><td colspan="5"><div class="empty">No offers yet.</div></td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section class="card" aria-labelledby="sw-h">
+    <div class="card-head"><div><h2 id="sw-h">Eligibility for subsequent drives</h2><p>Students holding offers, grouped by what the switching rules still allow</p></div></div>
+    <div class="card-body">
+      {% if stats.switching %}
+      {% set mx = stats.switching[0][1] %}
+      <div class="bars">
+        {% for label, n in stats.switching %}
+        <div class="bar-row"><span>{{ label }}</span><span class="bar-track"><span class="bar-fill {{ 'ink' if 'Out' in label else '' }}" data-pct="{{ 100 * n / mx }}"></span></span><span class="val">{{ n }}</span></div>
+        {% endfor %}
+      </div>
+      {% else %}<div class="empty"><strong>No offers yet</strong>Switching windows appear once offers are recorded.</div>{% endif %}
+    </div>
+  </section>
+</div>
+{% endblock %}

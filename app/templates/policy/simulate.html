@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "macros.html" import csrf, field, error_summary, decision_panel, category, acceptance_badge %}
+{% block title %}Eligibility simulator{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Policy</p>
+    <h1>Eligibility simulator</h1>
+    <p class="lede">Ask "can this student sit for this opportunity, and why?" against a real drive or a hypothetical one. Nothing is written.</p>
+  </div>
+</div>
+<div class="split">
+  <div class="stack-lg">
+    {% if result %}
+      {{ decision_panel(result, st.full_name ~ ' → ' ~ target.company_name, (target.offer_type|label('offer_type_long')) ~ ((' · ' ~ (target.ctc_lpa|lpa) ~ ' · Category ' ~ target.category) if target.ctc_lpa else ''), open=True, uid='sim') }}
+      <section class="card" aria-labelledby="hold-h">
+        <div class="card-head"><h2 id="hold-h">Offers considered</h2></div>
+        <div class="card-body tight table-wrap">
+          <table class="table">
+            <thead><tr><th scope="col">Company</th><th scope="col">Type</th><th scope="col">Cat.</th><th scope="col" class="num">CTC</th><th scope="col">Acceptance</th></tr></thead>
+            <tbody>
+            {% for o in offers %}<tr><td>{{ o.company_name }}</td><td><span class="badge plain">{{ o.offer_type|label('offer_type') }}</span>{% if o.ppo_status == 'accepted' %} <span class="sub">PPO accepted</span>{% endif %}</td><td>{{ category(o.category) }}</td><td class="num">{{ o.ctc_lpa|lpa }}</td><td>{{ acceptance_badge(o.acceptance) }}</td></tr>
+            {% else %}<tr><td colspan="5"><div class="empty">No offers held.</div></td></tr>{% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    {% else %}
+      <div class="notice">Enter a Placement ID and choose an opportunity. Try <span class="mono">NFSU-25-CS-003</span> (holds a B offer) or <span class="mono">NFSU-25-DFIS-002</span> (holds an A+ offer) from the demo data.</div>
+    {% endif %}
+  </div>
+  <form class="form card card-body" method="post" novalidate>
+    {{ csrf() }}
+    {{ error_summary(errors) }}
+    {{ field('placement_id', 'Placement ID', form, errors, required=True, attrs='maxlength="24" autocapitalize="characters" spellcheck="false"') }}
+    <fieldset class="field">
+      <legend>Opportunity</legend>
+      <div class="radio-row">
+        <label class="seg"><input type="radio" name="mode" value="hypothetical"{% if form.get('mode') != 'drive' %} checked{% endif %}><span>Hypothetical</span></label>
+        <label class="seg"><input type="radio" name="mode" value="drive"{% if form.get('mode') == 'drive' %} checked{% endif %}><span>Existing drive</span></label>
+      </div>
+    </fieldset>
+    <div class="stack" data-show-when="mode=hypothetical">
+      <div class="field"><label for="f-offer_type">Offer type</label>
+        <select class="select" id="f-offer_type" name="offer_type">{% for k, v in OFFER_TYPES.items() %}<option value="{{ k }}"{% if form.get('offer_type') == k %} selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+      {{ field('ctc_lpa', 'Annual CTC (LPA)', form, errors, type='number', hint='Ignored for internship-only.', attrs='step="0.01" min="0.5" max="500"') }}
+    </div>
+    <div class="field" data-show-when="mode=drive">
+      <label for="f-drive_id">Drive</label>
+      <select class="select" id="f-drive_id" name="drive_id" {% if errors.get('drive_id') %}aria-invalid="true"{% endif %}>
+        {% for d in drives %}<option value="{{ d.id }}"{% if form.get('drive_id') == d.id|string %} selected{% endif %}>{{ d.company_name }} — {{ d.title }} ({{ d.offer_type|label('offer_type') }}{% if d.ctc_lpa %}, {{ d.ctc_lpa|lpa }}{% endif %})</option>{% endfor %}
+      </select>
+      {% if errors.get('drive_id') %}<span class="error-text">{{ errors.drive_id }}</span>{% endif %}
+    </div>
+    <div class="form-actions"><button class="btn btn-primary" type="submit">Evaluate</button></div>
+  </form>
+</div>
+{% endblock %}

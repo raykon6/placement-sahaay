@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "macros.html" import category %}
+{% block title %}Recruitment drives{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Records</p>
+    <h1>Recruitment drives</h1>
+    <p class="lede">Each drive's category is derived from its CTC: A+ ≥ ₹16 LPA, A ₹10–16, B ₹6–10, C below ₹6 LPA.</p>
+  </div>
+  {% if has_perm('drive.write') %}<div class="actions"><a class="btn btn-primary" href="{{ url_for('drives.create') }}">New drive</a></div>{% endif %}
+</div>
+<div class="card table-wrap">
+  <table class="table">
+    <thead><tr><th scope="col">Company and role</th><th scope="col">Type</th><th scope="col">Category</th><th scope="col" class="num">Package</th><th scope="col">Programmes</th><th scope="col">Date</th><th scope="col">Status</th><th scope="col" class="num">Applicants</th><th scope="col" class="num">Offers</th></tr></thead>
+    <tbody>
+    {% for d in drives %}
+      <tr>
+        <td class="primary"><a href="{{ url_for('drives.detail', drive_id=d.id) }}">{{ d.company_name }}</a><span class="sub">{{ d.title }}</span></td>
+        <td><span class="badge plain">{{ d.offer_type|label('offer_type') }}</span></td>
+        <td>{{ category(d.category) }}</td>
+        <td class="num nowrap">{% if d.ctc_lpa %}{{ d.ctc_lpa|lpa }}{% endif %}{% if d.stipend_amount %}<span class="sub">{{ d.stipend_amount|inr }}/{{ 'mo' if d.stipend_period == 'month' else 'total' }}</span>{% endif %}</td>
+        <td class="small">{% for c in d.eligible_courses %}{{ c|label('course') }}{{ ', ' if not loop.last }}{% endfor %}</td>
+        <td class="nowrap">{{ d.drive_date }}</td>
+        <td>{% if d.status == 'open' %}<span class="badge badge-accent">Open</span>{% else %}<span class="badge">Closed</span>{% endif %}</td>
+        <td class="num">{{ d.applicants }}</td><td class="num">{{ d.offers }}</td>
+      </tr>
+    {% else %}<tr><td colspan="9"><div class="empty"><strong>No drives yet</strong>Create a drive to begin recording applications.</div></td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

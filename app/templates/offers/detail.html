@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% from "macros.html" import csrf, select, category, acceptance_badge, error_summary %}
+{% block title %}Offer {{ offer.id }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="breadcrumb"><a href="{{ url_for('offers.index') }}">Offers</a> / #{{ offer.id }}</p>
+    <h1>{{ offer.company_name }}</h1>
+    <p class="lede"><a href="{{ url_for('students.detail', student_id=offer.student_id) }}">{{ offer.full_name }}</a> · <span class="mono">{{ offer.placement_id }}</span> · {{ offer.course|label('course') }}</p>
+  </div>
+  <div class="actions">{{ acceptance_badge(offer.acceptance) }}</div>
+</div>
+<div class="split">
+  <div class="stack-lg">
+    <section class="card" aria-labelledby="t-h">
+      <div class="card-head"><h2 id="t-h">Terms</h2>{{ category(offer.category) }}</div>
+      <div class="card-body">
+        <dl class="dl">
+          <dt>Offer type</dt><dd>{{ offer.offer_type|label('offer_type_long') }}</dd>
+          <dt>Annual FTE CTC</dt><dd>{{ offer.ctc_lpa|lpa }}</dd>
+          <dt>Internship stipend</dt><dd>{% if offer.stipend_amount %}{{ offer.stipend_amount|inr }} {{ 'per month' if offer.stipend_period == 'month' else 'total' }}{% else %}—{% endif %}</dd>
+          <dt>Offer date</dt><dd>{{ offer.offer_date }}</dd>
+          <dt>Acceptance deadline</dt><dd>{{ offer.deadline_at|ist }}{% if offer.acceptance == 'pending' %} · <span class="countdown" data-deadline="{{ offer.deadline_at }}">{{ time_left(offer.deadline_at) }}</span>{% endif %}</dd>
+          <dt>Source</dt><dd>{{ 'Off-campus' if offer.off_campus else 'Campus drive' }}</dd>
+          <dt>Policy at entry</dt><dd>{% if offer.policy_outcome == 'allow' %}<span class="badge badge-ok">Compliant</span>{% elif offer.policy_outcome == 'review' %}<span class="badge badge-review">Referred for review</span>{% else %}<span class="badge badge-block">Suspected violation</span>{% endif %}</dd>
+          {% if offer.remarks %}<dt>Remarks</dt><dd>{{ offer.remarks }}</dd>{% endif %}
+        </dl>
+      </div>
+    </section>
+    <section class="card" aria-labelledby="h-h">
+      <div class="card-head"><div><h2 id="h-h">Change history</h2><p>From the tamper-evident audit trail</p></div></div>
+      <ul class="timeline">
+        {% for h in history %}
+          <li><span class="mono small">{{ h.action }}</span> · {{ h.actor }} <span class="muted small">({{ h.role }})</span><br>
+            <span class="small muted">{{ h.ts|ist }}</span><br><span class="hash">{{ h.detail }}</span></li>
+        {% else %}<li class="muted">No history.</li>{% endfor %}
+      </ul>
+    </section>
+  </div>
+  <aside>
+    {% if has_perm('offer.write') %}
+    <section class="card" aria-labelledby="u-h">
+      <div class="card-head"><div><h2 id="u-h">Update status</h2><p>Transitions are validated; every change needs a reason</p></div></div>
+      <div class="card-body">
+        <form class="form" method="post" action="{{ url_for('offers.update_status', offer_id=offer.id) }}" novalidate>
+          {{ csrf() }}
+          {{ error_summary(errors) }}
+          {% set f = request.form if request.method == 'POST' else offer %}
+          {{ select('acceptance', 'Offer acceptance', ACCEPTANCE, f, errors) }}
+          {{ select('joining', 'Joining status', JOINING, f, errors) }}
+          {{ select('ppo_status', 'PPO status', PPO, f, errors, hint='Internship offers only.') }}
+          {{ select('noc_status', 'NOC status', NOC, f, errors, hint='Off-campus offers only.') }}
+          <div class="field">
+            <label for="f-note">Reason for change</label>
+            <textarea class="textarea" id="f-note" name="note" minlength="5" maxlength="300" required {% if errors.get('note') %}aria-invalid="true" aria-describedby="e-note"{% endif %}>{{ request.form.get('note', '') }}</textarea>
+            {% if errors.get('note') %}<span class="error-text" id="e-note">{{ errors.note }}</span>{% endif %}
+          </div>
+          <div class="form-actions"><button class="btn btn-primary" type="submit">Save update</button></div>
+        </form>
+      </div>
+    </section>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

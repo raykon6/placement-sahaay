@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "macros.html" import category, acceptance_badge %}
+{% block title %}Offers{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Records</p>
+    <h1>Offers</h1>
+    <p class="lede">{{ offers|length }} offer{{ '' if offers|length == 1 else 's' }}. Pending offers expire automatically at the acceptance deadline.</p>
+  </div>
+  {% if has_perm('offer.write') %}<div class="actions"><a class="btn btn-primary" href="{{ url_for('offers.create') }}">Record offer</a></div>{% endif %}
+</div>
+<form class="filters" method="get" role="search" aria-label="Filter offers">
+  {% if g.user.role != 'coordinator' %}
+  <div class="field"><label for="fc">Programme</label><select class="select" id="fc" name="course"><option value="">All</option>{% for k, v in COURSE_SHORT.items() %}<option value="{{ k }}"{% if course == k %} selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+  {% endif %}
+  <div class="field"><label for="ft">Type</label><select class="select" id="ft" name="type"><option value="">All</option>{% for k, v in OFFER_TYPES.items() %}<option value="{{ k }}"{% if filters.get('type') == k %} selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+  <div class="field"><label for="fa">Acceptance</label><select class="select" id="fa" name="acceptance"><option value="">All</option>{% for k, v in ACCEPTANCE.items() %}<option value="{{ k }}"{% if filters.get('acceptance') == k %} selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+  <div class="actions"><button class="btn btn-primary" type="submit">Filter</button><a class="btn btn-ghost" href="{{ url_for('offers.index') }}">Reset</a></div>
+</form>
+<div class="card table-wrap">
+  <table class="table">
+    <thead><tr><th scope="col">Student</th><th scope="col">Company</th><th scope="col">Type</th><th scope="col">Cat.</th><th scope="col" class="num">FTE CTC</th><th scope="col" class="num">Stipend</th><th scope="col">Offer date</th><th scope="col">Acceptance</th><th scope="col">Policy at entry</th></tr></thead>
+    <tbody>
+    {% for o in offers %}
+      <tr>
+        <td class="primary"><a href="{{ url_for('offers.detail', offer_id=o.id) }}">{{ o.full_name }}</a><span class="sub mono">{{ o.placement_id }} · {{ o.course|label('course') }}</span></td>
+        <td>{{ o.company_name }}{% if o.off_campus %}<span class="sub">Off-campus</span>{% endif %}</td>
+        <td><span class="badge plain">{{ o.offer_type|label('offer_type') }}</span></td>
+        <td>{{ category(o.category) }}</td>
+        <td class="num">{{ o.ctc_lpa|lpa if o.ctc_lpa else '—' }}</td>
+        <td class="num nowrap">{% if o.stipend_amount %}{{ o.stipend_amount|inr }}<span class="sub">{{ 'per month' if o.stipend_period == 'month' else 'total' }}</span>{% else %}—{% endif %}</td>
+        <td class="nowrap">{{ o.offer_date }}</td>
+        <td>{{ acceptance_badge(o.acceptance) }}{% if o.acceptance == 'pending' %}<span class="sub countdown" data-deadline="{{ o.deadline_at }}">{{ time_left(o.deadline_at) }}</span>{% endif %}</td>
+        <td>{% if o.policy_outcome == 'allow' %}<span class="badge badge-ok">Compliant</span>{% elif o.policy_outcome == 'review' %}<span class="badge badge-review">Review</span>{% else %}<span class="badge badge-block">Flagged</span>{% endif %}</td>
+      </tr>
+    {% else %}<tr><td colspan="9"><div class="empty"><strong>No offers match</strong>Adjust the filters.</div></td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Reports</p>
+    <h1>Course-wise and university-level report</h1>
+    <p class="lede">Placed counts unique students; offers count every offer issued. FTE CTC is annual (LPA); stipends are monthly (₹) and never mixed with CTC.</p>
+  </div>
+  <div class="actions">
+    {% if has_perm('export') %}<a class="btn" href="{{ url_for('reports.export') }}">Secure export</a>{% endif %}
+    <button class="btn btn-primary" type="button" id="print-btn" hidden>Print</button>
+  </div>
+</div>
+<div class="card table-wrap">
+  <table class="table">
+    <caption class="sr-only">Placement outcomes by programme</caption>
+    <thead><tr>
+      <th scope="col">Programme</th><th scope="col" class="num">Registered</th><th scope="col" class="num">Eligible</th><th scope="col" class="num">Placed</th><th scope="col" class="num">Unplaced</th>
+      <th scope="col" class="num">I only</th><th scope="col" class="num">F only</th><th scope="col" class="num">I+PPO/F</th><th scope="col" class="num">Offers</th>
+      <th scope="col" class="num">Highest CTC</th><th scope="col" class="num">Median CTC</th><th scope="col" class="num">Avg stipend/mo</th>
+    </tr></thead>
+    <tbody>
+    {% for c, s in per_course %}
+      <tr>
+        <th scope="row">{{ c|label('course') }}</th>
+        <td class="num">{{ s.registered }}</td><td class="num">{{ s.eligible }}</td><td class="num">{{ s.placed }}</td><td class="num">{{ s.unplaced }}</td>
+        <td class="num">{{ s.status_counts.internship }}</td><td class="num">{{ s.status_counts.fte }}</td><td class="num">{{ s.status_counts.internship_fte }}</td>
+        <td class="num">{{ s.total_offers }}</td><td class="num">{{ s.fte.highest|lpa }}</td><td class="num">{{ s.fte.median|lpa }}</td><td class="num">{{ s.stipend.average|inr }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+    <tfoot>
+      {% set s = overall %}
+      <tr>
+        <th scope="row">{{ 'Total' if per_course|length > 1 else 'Programme total' }}</th>
+        <td class="num"><strong>{{ s.registered }}</strong></td><td class="num"><strong>{{ s.eligible }}</strong></td><td class="num"><strong>{{ s.placed }}</strong></td><td class="num"><strong>{{ s.unplaced }}</strong></td>
+        <td class="num">{{ s.status_counts.internship }}</td><td class="num">{{ s.status_counts.fte }}</td><td class="num">{{ s.status_counts.internship_fte }}</td>
+        <td class="num"><strong>{{ s.total_offers }}</strong></td><td class="num">{{ s.fte.highest|lpa }}</td><td class="num">{{ s.fte.median|lpa }}</td><td class="num">{{ s.stipend.average|inr }}</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+<div class="grid grid-3 section">
+  <div class="card card-body"><h4>Average FTE CTC</h4><p class="kpi-big">{{ overall.fte.average|lpa }}</p><p class="small muted">Across {{ overall.fte.count }} FTE-bearing offers (declined excluded)</p></div>
+  <div class="card card-body"><h4>Unique placed vs offers</h4><p class="kpi-big">{{ overall.placed }} / {{ overall.total_offers }}</p><p class="small muted">Students placed / offers issued</p></div>
+  <div class="card card-body"><h4>Pending compliance</h4><p class="kpi-big">{{ overall.open_flags }}</p><p class="small muted">{{ overall.pending_acceptance }} awaiting acceptance · {{ overall.pending_joining }} joining pending</p></div>
+</div>
+{% endblock %}

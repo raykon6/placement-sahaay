@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% from "macros.html" import csrf %}
+{% block title %}Review queue{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Policy</p>
+    <h1>Review queue</h1>
+    <p class="lede">Suspected violations, guideline conflicts, absenteeism and expired offers. The system flags; the Placement Cell decides.</p>
+  </div>
+  <nav class="actions" aria-label="Flag status">
+    {% for s in ('open', 'resolved', 'dismissed') %}
+    <a class="btn btn-sm{{ ' btn-primary' if status == s }}" href="{{ url_for('policy.flags', status=s) }}"{% if status == s %} aria-current="page"{% endif %}>{{ s|capitalize }}</a>
+    {% endfor %}
+  </nav>
+</div>
+<div class="stack">
+{% for f in flags %}
+  <article class="card" aria-labelledby="fl-{{ f.id }}">
+    <div class="card-head">
+      <div>
+        <h3 id="fl-{{ f.id }}">{{ f.kind|label('flag_kind') }} · <a href="{{ url_for('students.detail', student_id=f.student_id) }}">{{ f.full_name }}</a></h3>
+        <p><span class="mono">{{ f.placement_id }}</span> · {{ f.course|label('course') }} · raised {{ f.created_at|ist }}</p>
+      </div>
+      <span class="badge {{ 'badge-block' if f.kind == 'policy_violation' else 'badge-review' }}">{{ f.status|capitalize }}</span>
+    </div>
+    <div class="card-body stack">
+      <p>{{ f.detail }}</p>
+      {% if f.offer_id and has_perm('offer.read') %}<p class="small"><a href="{{ url_for('offers.detail', offer_id=f.offer_id) }}">View related offer</a></p>{% endif %}
+      {% if f.status == 'open' and has_perm('flag.resolve') %}
+      <form class="form" method="post" action="{{ url_for('policy.resolve_flag', flag_id=f.id) }}" novalidate>
+        {{ csrf() }}
+        <div class="field"><label for="r-{{ f.id }}">Placement Cell decision</label><input class="input" id="r-{{ f.id }}" name="reason" minlength="10" maxlength="300" required></div>
+        <div class="form-actions">
+          <button class="btn btn-primary btn-sm" type="submit" name="action" value="resolved">Resolve</button>
+          <button class="btn btn-sm" type="submit" name="action" value="dismissed">Dismiss</button>
+        </div>
+      </form>
+      {% elif f.resolution %}
+      <p class="small"><strong>Decision by {{ f.resolver }}:</strong> {{ f.resolution }} <span class="muted">({{ f.resolved_at|ist }})</span></p>
+      {% endif %}
+    </div>
+  </article>
+{% else %}
+  <div class="card"><div class="empty"><strong>Nothing {{ status }}</strong>{{ 'No cases currently need review.' if status == 'open' else 'No cases in this list.' }}</div></div>
+{% endfor %}
+</div>
+{% endblock %}

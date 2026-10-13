@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% from "macros.html" import csrf, category, outcome_badge %}
+{% block title %}{{ drive.company_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="breadcrumb"><a href="{{ url_for('drives.index') }}">Recruitment drives</a> / {{ drive.company_name }}</p>
+    <h1>{{ drive.company_name }} — {{ drive.title }}</h1>
+    <p class="lede">{{ drive.offer_type|label('offer_type_long') }}{% if drive.ctc_lpa %} · {{ drive.ctc_lpa|lpa }}{% endif %}{% if drive.stipend_amount %} · Stipend {{ drive.stipend_amount|inr }}/{{ 'month' if drive.stipend_period == 'month' else 'total' }}{% endif %} · {{ drive.drive_date }}</p>
+  </div>
+  <div class="actions">
+    {{ category(drive.category) }}
+    {% if drive.status == 'open' %}<span class="badge badge-accent">Open</span>{% else %}<span class="badge">Closed</span>{% endif %}
+    {% if has_perm('drive.write') %}
+    <form class="inline-form" method="post" action="{{ url_for('drives.toggle', drive_id=drive.id) }}">{{ csrf() }}<button class="btn btn-sm" type="submit">{{ 'Close drive' if drive.status == 'open' else 'Reopen drive' }}</button></form>
+    {% endif %}
+    {% if has_perm('offer.write') %}<a class="btn btn-sm btn-primary" href="{{ url_for('offers.create', drive=drive.id) }}">Record offer</a>{% endif %}
+  </div>
+</div>
+
+<div class="split">
+  <section class="card" aria-labelledby="ap-h">
+    <div class="card-head"><div><h2 id="ap-h">Applicants</h2><p>Live policy decision shown next to the decision recorded at registration</p></div></div>
+    {% if rows %}
+    <form method="post" action="{{ url_for('drives.attendance', drive_id=drive.id) }}" novalidate>
+      {{ csrf() }}
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th scope="col">Student</th><th scope="col">Policy now</th><th scope="col">Application</th>{% if has_perm('attendance.write') %}<th scope="col">Attendance for event</th>{% endif %}</tr></thead>
+          <tbody>
+          {% for r in rows %}{% set a = r.app %}
+            <tr>
+              <td class="primary"><a href="{{ url_for('students.detail', student_id=a.student_id) }}">{{ a.full_name }}</a><span class="sub mono">{{ a.placement_id }} · {{ a.course|label('course') }}</span></td>
+              <td>{{ outcome_badge(r.decision.outcome) }}{% if r.decision.outcome != 'allow' %}<span class="sub">{{ r.decision.headline }}</span>{% endif %}
+                {% if r.snapshot.override %}<span class="sub">Approved exception: {{ r.snapshot.override }}</span>{% endif %}</td>
+              <td>
+                {% if has_perm('application.write') %}
+                <label class="sr-only" for="st-{{ a.id }}">Application status for {{ a.full_name }}</label>
+                <select class="select" id="st-{{ a.id }}" name="status" form="app-{{ a.id }}">
+                  {% for k, v in statuses.items() %}<option value="{{ k }}"{% if a.status == k %} selected{% endif %}>{{ v }}</option>{% endfor %}
+                </select>
+                <button class="btn btn-sm" type="submit" form="app-{{ a.id }}">Save</button>
+                {% else %}{{ a.status|label('application') }}{% endif %}
+              </td>
+              {% if has_perm('attendance.write') %}
+              <td>
+                {% set rec = att.get(a.student_id, {}) %}
+                <label class="sr-only" for="at-{{ a.student_id }}">Attendance for {{ a.full_name }}</label>
+                <select class="select" id="at-{{ a.student_id }}" name="status_{{ a.student_id }}">
+                  <option value="">Not recorded</option>
+                  <option value="present">Present</option>
+                  <option value="absent">Absent</option>
+                  {% if has_perm('attendance.except') %}<option value="excused">Excused (exception)</option>{% endif %}
+                </select>
+                <label class="sr-only" for="rs-{{ a.student_id }}">Exception reason for {{ a.full_name }}</label>
+                <input class="input" id="rs-{{ a.student_id }}" name="reason_{{ a.student_id }}" placeholder="Exception reason" maxlength="300">
+                {% if rec %}<span class="sub">{% for ev, x in rec.items() %}{{ ev|label('event') }}: {{ x.status }}{{ '; ' if not loop.last }}{% endfor %}</span>{% endif %}
+              </td>
+              {% endif %}
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if has_perm('attendance.write') %}
+      <div class="card-body form-actions">
+        <div class="field"><label for="f-event">Event</label>
+          <select class="select" id="f-event" name="event">{% for k, v in EVENTS.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
+        <button class="btn btn-primary" type="submit">Record attendance</button>
+        <span class="small muted">An unexcused absence bars the student from the next drives (see policy settings).</span>
+      </div>
+      {% endif %}
+    </form>
+    {% for r in rows %}
+      <form id="app-{{ r.app.id }}" class="app-status-form" method="post" action="{{ url_for('drives.application_status', app_id=r.app.id) }}">{{ csrf() }}</form>
+    {% endfor %}
+    {% else %}<div class="empty"><strong>No applicants yet</strong>Students apply from their portal, or register them here.</div>{% endif %}
+  </section>
+
+  <aside class="stack-lg">
+    {% if has_perm('application.write') and drive.status == 'open' %}
+    <section class="card" aria-labelledby="rg-h">
+      <div class="card-head"><div><h2 id="rg-h">Register a student</h2><p>The policy engine checks eligibility before registration</p></div></div>
+      <div class="card-body">
+        <form class="form" method="post" action="{{ url_for('drives.register', drive_id=drive.id) }}" novalidate>
+          {{ csrf() }}
+          <div class="field"><label for="f-pid">Placement ID</label><input class="input mono" id="f-pid" name="placement_id" value="{{ request.args.get('review', '') }}" maxlength="24" required autocapitalize="characters" spellcheck="false"></div>
+          {% if request.args.get('review') %}
+          <div class="field"><label for="f-ovr">Placement Cell approval</label>
+            <textarea class="textarea" id="f-ovr" name="override_reason" minlength="10" maxlength="300" required aria-describedby="h-ovr"></textarea>
+            <span class="hint" id="h-ovr">Required for cases referred to manual review. Recorded in the audit trail.</span></div>
+          {% endif %}
+          <button class="btn btn-primary" type="submit">Check and register</button>
+        </form>
+      </div>
+    </section>
+    {% endif %}
+    <section class="card" aria-labelledby="dd-h">
+      <div class="card-head"><h2 id="dd-h">Drive criteria</h2></div>
+      <div class="card-body">
+        <dl class="dl">
+          <dt>Programmes</dt><dd>{% for c in drive.eligible_courses %}{{ c|label('course') }}{{ ', ' if not loop.last }}{% endfor %}</dd>
+          <dt>Minimum CGPA</dt><dd>{{ drive.min_cgpa if drive.min_cgpa is not none else 'None' }}</dd>
+          <dt>Response window</dt><dd>{{ drive.response_hours }} hours (deadline uses the earlier of this and 24 hours)</dd>
+        </dl>
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}

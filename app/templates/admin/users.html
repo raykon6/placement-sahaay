@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% from "macros.html" import csrf, field, select, error_summary %}
+{% block title %}Users and roles{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Governance</p>
+    <h1>Users and roles</h1>
+    <p class="lede">Least privilege: coordinators are scoped to one programme, recruiters to one company, students to their own record.</p>
+  </div>
+</div>
+{% if issued %}
+<div class="notice notice-warn" role="alert">
+  <strong>Temporary password for {{ issued.username }} — shown once.</strong>
+  <div class="secret">{{ issued.password }}</div>
+  <p class="small">Share it through a secure channel. The user must set a new password at first sign-in. It is not stored in readable form.</p>
+</div>
+<div class="divider"></div>
+{% endif %}
+<div class="split">
+  <div class="card table-wrap">
+    <table class="table">
+      <thead><tr><th scope="col">User</th><th scope="col">Role and scope</th><th scope="col">Security</th><th scope="col">Actions</th></tr></thead>
+      <tbody>
+      {% for u in users %}
+        <tr>
+          <td class="primary">{{ u.display_name }}<span class="sub mono">{{ u.username }}</span></td>
+          <td>{{ u.role|label('role') }}<span class="sub">{% if u.course_scope %}{{ u.course_scope|label('course') }}{% elif u.company_name %}{{ u.company_name }}{% elif u.placement_id %}{{ u.placement_id }}{% else %}All programmes{% endif %}</span></td>
+          <td class="small">{% if not u.active %}<span class="badge">Inactive</span>{% elif u.locked_until %}<span class="badge badge-block">Locked</span>{% else %}<span class="badge badge-ok">Active</span>{% endif %}
+            <span class="sub">MFA {{ 'on' if u.mfa_enabled else 'off' }} · last sign-in {{ u.last_login_at|ist if u.last_login_at else 'never' }}</span></td>
+          <td>
+            <div class="actions">
+              <form method="post" action="{{ url_for('admin.user_action', user_id=u.id, action='reset') }}" data-confirm="Issue a new temporary password for {{ u.username }}? Their sessions will be ended.">{{ csrf() }}<button class="btn btn-sm" type="submit">Reset password</button></form>
+              {% if u.id != g.user.id %}<form method="post" action="{{ url_for('admin.user_action', user_id=u.id, action='toggle') }}" data-confirm="{{ 'Deactivate' if u.active else 'Reactivate' }} {{ u.username }}?">{{ csrf() }}<button class="btn btn-sm {{ 'btn-danger' if u.active }}" type="submit">{{ 'Deactivate' if u.active else 'Reactivate' }}</button></form>{% endif %}
+              {% if u.locked_until %}<form method="post" action="{{ url_for('admin.user_action', user_id=u.id, action='unlock') }}">{{ csrf() }}<button class="btn btn-sm" type="submit">Unlock</button></form>{% endif %}
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <section class="card" aria-labelledby="nu-h">
+    <div class="card-head"><div><h2 id="nu-h">Create account</h2><p>A one-time temporary password is generated</p></div></div>
+    <form class="form card-body" method="post" action="{{ url_for('admin.create_user') }}" novalidate>
+      {{ csrf() }}
+      {{ error_summary(errors) }}
+      {{ field('username', 'Username', form, errors, required=True, attrs='maxlength="32" autocapitalize="none" spellcheck="false"') }}
+      {{ field('display_name', 'Display name', form, errors, required=True, attrs='maxlength="80"') }}
+      {{ select('role', 'Role', ROLES, form, errors, blank='Select role') }}
+      <div data-show-when="role=coordinator">{{ select('course_scope', 'Programme scope', COURSES, form, errors, blank='Select programme') }}</div>
+      {% set comp = {} %}{% for c in companies %}{% set _ = comp.update({c.id|string: c.name}) %}{% endfor %}
+      <div data-show-when="role=recruiter">{{ select('company_id', 'Company', comp, form, errors, blank='Select company') }}</div>
+      <div data-show-when="role=student">{{ field('placement_id', 'Linked Placement ID', form, errors, required=True, attrs='maxlength="24"') }}</div>
+      <div class="form-actions"><button class="btn btn-primary" type="submit">Create account</button></div>
+    </form>
+  </section>
+</div>
+{% endblock %}

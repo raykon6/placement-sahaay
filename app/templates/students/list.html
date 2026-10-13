@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% from "macros.html" import status_badge, pager %}
+{% block title %}Students{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Records</p>
+    <h1>Students</h1>
+    <p class="lede">{{ total }} {{ 'archived ' if archived }}record{{ '' if total == 1 else 's' }}{% if g.user.role == 'coordinator' %} in {{ course|label('course_long') }}{% endif %}. Placement status is derived from offer history and cannot be edited directly.</p>
+  </div>
+  <div class="actions">
+    {% if has_perm('student.import') %}<a class="btn" href="{{ url_for('students.import_csv') }}">Import CSV</a>{% endif %}
+    {% if has_perm('student.write') %}<a class="btn btn-primary" href="{{ url_for('students.create') }}">Add student</a>{% endif %}
+  </div>
+</div>
+
+<form class="filters" method="get" action="{{ url_for('students.index') }}" role="search" aria-label="Filter students">
+  <div class="field grow"><label for="q">Search</label><input class="input" id="q" name="q" type="search" value="{{ filters.get('q', '') }}" placeholder="Name or Placement ID" maxlength="60"></div>
+  {% if g.user.role != 'coordinator' %}
+  <div class="field"><label for="fc">Programme</label>
+    <select class="select" id="fc" name="course"><option value="">All</option>{% for k, v in COURSE_SHORT.items() %}<option value="{{ k }}"{% if course == k %} selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+  {% endif %}
+  <div class="field"><label for="fb">Batch</label>
+    <select class="select" id="fb" name="batch"><option value="">All</option>{% for b in batches %}<option value="{{ b }}"{% if filters.get('batch') == b %} selected{% endif %}>{{ b }}</option>{% endfor %}</select></div>
+  <div class="field"><label for="fr">Registration</label>
+    <select class="select" id="fr" name="registration_status"><option value="">All</option>{% for k, v in REGISTRATION.items() %}<option value="{{ k }}"{% if filters.get('registration_status') == k %} selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+  <div class="field"><label for="fe">Eligibility</label>
+    <select class="select" id="fe" name="eligibility_status"><option value="">All</option>{% for k, v in ELIGIBILITY.items() %}<option value="{{ k }}"{% if filters.get('eligibility_status') == k %} selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+  <div class="field"><label for="fp">Placement</label>
+    <select class="select" id="fp" name="placement"><option value="">All</option>{% for k, v in PLACEMENT_STATUS.items() %}<option value="{{ k }}"{% if filters.get('placement') == k %} selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+  <div class="field"><label class="check" for="fa"><input type="checkbox" id="fa" name="archived" value="1"{% if archived %} checked{% endif %}> Archived only</label></div>
+  <div class="actions"><button class="btn btn-primary" type="submit">Filter</button><a class="btn btn-ghost" href="{{ url_for('students.index') }}">Reset</a></div>
+</form>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="table">
+      <caption class="sr-only">Students matching the current filters</caption>
+      <thead><tr>
+        <th scope="col">Student</th><th scope="col">Programme</th><th scope="col">Batch</th><th scope="col">Registration</th>
+        <th scope="col">Eligibility</th><th scope="col">Placement</th><th scope="col">Next-drive window</th><th scope="col" class="num">Offers</th>
+      </tr></thead>
+      <tbody>
+      {% for s in students %}
+        <tr>
+          <td class="primary"><a href="{{ url_for('students.detail', student_id=s.id) }}">{{ s.full_name }}</a><span class="sub mono">{{ s.placement_id }}</span></td>
+          <td>{{ s.course|label('course') }}</td>
+          <td class="mono small">{{ s.batch }}</td>
+          <td>{{ s.registration_status|label('registration') }}</td>
+          <td>{% if s.eligibility_status == 'eligible' %}<span class="badge badge-ok">Eligible</span>{% elif s.eligibility_status == 'pending' %}<span class="badge badge-review">Pending</span>{% else %}<span class="badge badge-block">Ineligible</span>{% endif %}</td>
+          <td>{{ status_badge(s.placement_status) }}</td>
+          <td class="small">{{ s.window.label }}</td>
+          <td class="num">{{ s.offer_count }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="8"><div class="empty"><strong>No students found</strong>Adjust the filters or add a student.</div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% set args = {} %}{% for k, v in filters.items() if k != 'page' %}{% set _ = args.update({k: v}) %}{% endfor %}
+  {{ pager(page, pages, 'students.index', args) }}
+</div>
+{% endblock %}

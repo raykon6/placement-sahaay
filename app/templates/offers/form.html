@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% from "macros.html" import csrf, field, select, error_summary %}
+{% block title %}Record offer{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="breadcrumb"><a href="{{ url_for('offers.index') }}">Offers</a> / Record</p>
+    <h1>Record an offer</h1>
+    <p class="lede">Offers are facts and are always recorded. If the policy engine finds a conflict, the offer is flagged for Placement Cell review.</p>
+  </div>
+</div>
+<div class="split">
+  <form class="form card card-body" method="post" novalidate>
+    {{ csrf() }}
+    {{ error_summary(errors) }}
+    <div class="form-grid">
+      {{ field('placement_id', 'Student Placement ID', form, errors, required=True, attrs='maxlength="24" autocapitalize="characters" spellcheck="false"') }}
+      {% set drive_opts = {'': 'Off-campus offer (no drive)'} %}
+      {% for d in drives %}{% set _ = drive_opts.update({d.id|string: d.company_name ~ ' — ' ~ d.title ~ ' (' ~ d.drive_date ~ ')'}) %}{% endfor %}
+      {{ select('drive_id', 'Campus drive', drive_opts, form, errors, required=False, hint='For campus drives, type and package are taken from the drive record.') }}
+      <div class="span-2" data-show-when="drive_id="><div class="form-grid">
+        {{ field('company_name', 'Company (off-campus)', form, errors, required=True, hint='An NOC request is opened automatically for off-campus offers.', attrs='maxlength="80"') }}
+        {{ select('offer_type', 'Offer type', OFFER_TYPES, form, errors, blank='Select type') }}
+        {{ field('ctc_lpa', 'Annual CTC (LPA)', form, errors, type='number', hint='Required for F and I+F.', attrs='step="0.01" min="0.5" max="500" inputmode="decimal"') }}
+        {{ field('stipend_amount', 'Stipend (₹)', form, errors, type='number', attrs='step="1" min="0"') }}
+        {{ select('stipend_period', 'Stipend period', {'month': 'Per month', 'total': 'Total'}, form, errors, required=False, blank='Select') }}
+      </div></div>
+      {{ field('offer_date', 'Offer date', form, errors, type='date', required=True) }}
+      {{ field('response_hours', 'Company response window (hours)', form, errors, type='number', required=True, hint='Deadline = earlier of 24 hours or this window.', attrs='min="1" max="720"') }}
+      <div class="field span-2">
+        <label for="f-remarks">Remarks <span class="req">(optional)</span></label>
+        <textarea class="textarea" id="f-remarks" name="remarks" maxlength="500">{{ form.get('remarks') or '' }}</textarea>
+      </div>
+    </div>
+    <div class="form-actions"><button class="btn btn-primary" type="submit">Record offer</button><a class="btn btn-ghost" href="{{ url_for('offers.index') }}">Cancel</a></div>
+  </form>
+  <aside class="stack">
+    <div class="notice"><strong>Server-derived fields.</strong> Category, deadline and policy outcome are computed on the server. Values sent from the browser for these fields are ignored.</div>
+    <div class="notice"><strong>Acceptance deadline.</strong> 24 hours from issue, or the company's stated timeline if that is earlier. Pending offers expire automatically.</div>
+  </aside>
+</div>
+{% endblock %}

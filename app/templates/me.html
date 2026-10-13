@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% from "macros.html" import csrf, status_badge, acceptance_badge, category, decision_panel %}
+{% block title %}My placement{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Student portal</p>
+    <h1>{{ st.full_name }}</h1>
+    <p class="lede"><span class="mono">{{ st.placement_id }}</span> · {{ st.course|label('course_long') }} · Batch {{ st.batch }}</p>
+  </div>
+  {{ status_badge(status) }}
+</div>
+<div class="split">
+  <div class="stack-lg">
+    <section aria-labelledby="dr-h">
+      <h2 id="dr-h">Open drives for your programme</h2>
+      <p class="muted small">Your eligibility is decided by the Placement Guidelines. Each decision shows the rules applied.</p>
+      <div class="stack">
+      {% for item in drives %}{% set d = item.drive %}
+        <div class="stack">
+          {{ decision_panel(item.decision, d.company_name ~ ' — ' ~ d.title, (d.offer_type|label('offer_type_long')) ~ ((' · ' ~ (d.ctc_lpa|lpa)) if d.ctc_lpa else '') ~ ' · ' ~ d.drive_date, uid='dr' ~ loop.index) }}
+          <div class="actions">
+            {% if item.application %}<span class="badge badge-accent">{{ item.application.status|label('application') }}</span>
+            {% elif item.decision.outcome == 'allow' %}
+              <form method="post" action="{{ url_for('main.apply', drive_id=d.id) }}" data-confirm="Apply to {{ d.company_name }}? Attendance at all recruitment events becomes mandatory.">{{ csrf() }}<button class="btn btn-primary btn-sm" type="submit">Apply</button></form>
+            {% elif item.decision.outcome == 'review' %}<span class="small muted">Contact the Placement Cell — this case needs manual review.</span>
+            {% else %}<span class="small muted">Not available under the placement policy.</span>{% endif %}
+          </div>
+        </div>
+      {% else %}<div class="notice">No open drives for your programme right now.</div>{% endfor %}
+      </div>
+    </section>
+    <section class="card" aria-labelledby="of-h">
+      <div class="card-head"><h2 id="of-h">My offers</h2></div>
+      <div class="card-body tight table-wrap">
+        <table class="table">
+          <thead><tr><th scope="col">Company</th><th scope="col">Type</th><th scope="col">Cat.</th><th scope="col" class="num">Package</th><th scope="col">Acceptance</th><th scope="col">Joining</th></tr></thead>
+          <tbody>
+          {% for o in offers %}
+            <tr><td>{{ o.company_name }}</td><td><span class="badge plain">{{ o.offer_type|label('offer_type') }}</span></td><td>{{ category(o.category) }}</td>
+              <td class="num nowrap">{% if o.ctc_lpa %}{{ o.ctc_lpa|lpa }}{% endif %}{% if o.stipend_amount %}<span class="sub">{{ o.stipend_amount|inr }}/{{ 'mo' if o.stipend_period == 'month' else 'total' }}</span>{% endif %}</td>
+              <td>{{ acceptance_badge(o.acceptance) }}{% if o.acceptance == 'pending' %}<span class="sub countdown" data-deadline="{{ o.deadline_at }}">{{ time_left(o.deadline_at) }}</span>{% endif %}</td>
+              <td>{{ o.joining|label('joining') }}</td></tr>
+          {% else %}<tr><td colspan="6"><div class="empty">No offers yet.</div></td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+  <aside class="stack-lg">
+    <section class="card" aria-labelledby="pr-h">
+      <div class="card-head"><h2 id="pr-h">My record</h2></div>
+      <div class="card-body stack">
+        <dl class="dl">
+          <dt>Registration</dt><dd>{{ st.registration_status|label('registration') }}</dd>
+          <dt>Eligibility</dt><dd>{{ st.eligibility_status|label('eligibility') }}</dd>
+          <dt>May apply for</dt><dd><strong>{{ window.label }}</strong></dd>
+          <dt>Mobile</dt><dd class="mono">+91 {{ contact.mobile }}</dd>
+          <dt>Email</dt><dd class="mono">{{ contact.email }}</dd>
+        </dl>
+        <p class="small muted">Your record is read-only. To correct any detail, or to accept or decline an offer, contact the Placement Cell — every change is verified and logged.</p>
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}

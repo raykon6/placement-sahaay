@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% from "macros.html" import csrf %}
+{% set errors = errors or {} %}
+{% block title %}Account security{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Account</p>
+    <h1>Account security</h1>
+    <p class="lede">Manage your password and multi-factor authentication. Changing your password signs out all other sessions.</p>
+  </div>
+</div>
+{% if g.user.must_change_password %}
+<div class="notice notice-warn" role="alert"><strong>Action required.</strong> Your password was issued by an administrator. Set a new password to continue.</div>
+<div class="divider"></div>
+{% endif %}
+<div class="grid grid-2">
+  <section class="card" aria-labelledby="pw-h">
+    <div class="card-head"><div><h2 id="pw-h">Password</h2><p>At least 12 characters. Avoid common phrases and your username.</p></div></div>
+    <div class="card-body">
+      <form class="form" method="post" action="{{ url_for('auth.change_password') }}" novalidate>
+        {{ csrf() }}
+        {% for name, label, ac in [('current_password', 'Current password', 'current-password'), ('new_password', 'New password', 'new-password'), ('confirm_password', 'Confirm new password', 'new-password')] %}
+        <div class="field">
+          <label for="f-{{ name }}">{{ label }}</label>
+          <input class="input" id="f-{{ name }}" name="{{ name }}" type="password" autocomplete="{{ ac }}" maxlength="128" required
+                 {% if errors.get(name) %}aria-invalid="true" aria-describedby="e-{{ name }}"{% endif %}>
+          {% if errors.get(name) %}<span class="error-text" id="e-{{ name }}">{{ errors[name] }}</span>{% endif %}
+        </div>
+        {% endfor %}
+        <div class="form-actions"><button class="btn btn-primary" type="submit">Update password</button></div>
+      </form>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="mfa-h">
+    <div class="card-head">
+      <div><h2 id="mfa-h">Multi-factor authentication</h2><p>Time-based one-time codes (RFC 6238) from any authenticator app.</p></div>
+      {% if g.user.mfa_enabled %}<span class="badge badge-ok">Enabled</span>{% else %}<span class="badge">Not enabled</span>{% endif %}
+    </div>
+    <div class="card-body stack">
+      {% if g.user.mfa_enabled %}
+        <p class="prose">A verification code is required each time you sign in.</p>
+        <form class="form" method="post" action="{{ url_for('auth.mfa_disable') }}" data-confirm="Turn off multi-factor authentication for this account?" novalidate>
+          {{ csrf() }}
+          <div class="field">
+            <label for="f-disable_password">Confirm with your password</label>
+            <input class="input" id="f-disable_password" name="current_password" type="password" autocomplete="current-password" required
+                   {% if errors.get('disable_password') %}aria-invalid="true" aria-describedby="e-disable_password"{% endif %}>
+            {% if errors.get('disable_password') %}<span class="error-text" id="e-disable_password">{{ errors['disable_password'] }}</span>{% endif %}
+          </div>
+          <div class="form-actions"><button class="btn btn-danger" type="submit">Turn off MFA</button></div>
+        </form>
+      {% elif enrolling %}
+        <ol class="prose small">
+          <li>In your authenticator app, add an account manually using this key.</li>
+          <li>Enter the 6-digit code it shows to confirm.</li>
+        </ol>
+        <div class="secret" aria-label="Setup key">{{ enrolling.secret }}</div>
+        <details class="disclosure"><summary>Show provisioning URI</summary><p class="hash">{{ enrolling.uri }}</p></details>
+        <form class="form" method="post" action="{{ url_for('auth.mfa_confirm') }}" novalidate>
+          {{ csrf() }}
+          <div class="field">
+            <label for="f-code">Code from your app</label>
+            <input class="input mono" id="f-code" name="code" inputmode="numeric" maxlength="7" autocomplete="one-time-code" required
+                   {% if errors.get('code') %}aria-invalid="true" aria-describedby="e-code"{% endif %}>
+            {% if errors.get('code') %}<span class="error-text" id="e-code">{{ errors['code'] }}</span>{% endif %}
+          </div>
+          <div class="form-actions"><button class="btn btn-primary" type="submit">Confirm and enable</button></div>
+        </form>
+      {% else %}
+        <p class="prose">{% if g.user.role in ('admin', 'officer') %}Strongly recommended: your role can view contact and compensation data.{% else %}Adds a second factor to your sign-in.{% endif %}</p>
+        <form method="post" action="{{ url_for('auth.mfa_start') }}">{{ csrf() }}<button class="btn btn-primary" type="submit">Set up MFA</button></form>
+      {% endif %}
+    </div>
+  </section>
+</div>
+<section class="section card" aria-labelledby="acc-h">
+  <div class="card-head"><h2 id="acc-h">Account details</h2></div>
+  <div class="card-body">
+    <dl class="dl">
+      <dt>Username</dt><dd class="mono">{{ g.user.username }}</dd>
+      <dt>Role</dt><dd>{{ g.user.role|label('role') }}</dd>
+      {% if g.user.course_scope %}<dt>Programme scope</dt><dd>{{ g.user.course_scope|label('course_long') }}</dd>{% endif %}
+      <dt>Last sign-in</dt><dd>{{ g.user.last_login_at|ist }}</dd>
+      <dt>Session policy</dt><dd>Ends after {{ config.SESSION_IDLE_MINUTES }} minutes idle or {{ config.SESSION_ABSOLUTE_HOURS }} hours total</dd>
+    </dl>
+  </div>
+</section>
+{% endblock %}

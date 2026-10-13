@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "macros.html" import csrf, field, select, error_summary %}
+{% block title %}New drive{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="breadcrumb"><a href="{{ url_for('drives.index') }}">Recruitment drives</a> / New</p>
+    <h1>New recruitment drive</h1>
+    <p class="lede">The category is computed on the server from the CTC and cannot be entered by hand.</p>
+  </div>
+</div>
+<form class="form card card-body" method="post" novalidate>
+  {{ csrf() }}
+  {{ error_summary(errors) }}
+  <div class="form-grid">
+    {{ field('company_name', 'Company', form, errors, required=True, attrs='maxlength="80"', autocomplete="organization") }}
+    {{ field('title', 'Role title', form, errors, required=True, attrs='maxlength="120"') }}
+    <fieldset class="field span-2" aria-describedby="h-offer_type{% if errors.get('offer_type') %} e-offer_type{% endif %}">
+      <legend id="f-offer_type">Offer type</legend>
+      <div class="radio-row">
+        {% for k, v in OFFER_TYPES.items() %}
+        <label class="seg"><input type="radio" name="offer_type" value="{{ k }}"{% if form.get('offer_type') == k %} checked{% endif %} required><span>{{ v }}</span></label>
+        {% endfor %}
+      </div>
+      <span class="hint" id="h-offer_type">Offer-type restrictions (I, F, I+F) are enforced for students who already hold offers.</span>
+      {% if errors.get('offer_type') %}<span class="error-text" id="e-offer_type">{{ errors.offer_type }}</span>{% endif %}
+    </fieldset>
+    <div data-show-when="offer_type=F,IF" class="span-2"><div class="form-grid">
+      {{ field('ctc_lpa', 'Annual CTC (LPA)', form, errors, type='number', required=True, hint='Determines the company category.', attrs='step="0.01" min="0.5" max="500" inputmode="decimal"') }}
+    </div></div>
+    <div data-show-when="offer_type=I,IF" class="span-2"><div class="form-grid">
+      {{ field('stipend_amount', 'Internship stipend (₹)', form, errors, type='number', attrs='step="1" min="0" inputmode="numeric"') }}
+      {{ select('stipend_period', 'Stipend period', {'month': 'Per month', 'total': 'Total for internship'}, form, errors, required=False, blank='Select') }}
+    </div></div>
+    <fieldset class="field span-2">
+      <legend id="f-eligible_courses">Eligible programmes</legend>
+      <div class="checks">
+        {% for k, v in COURSES.items() %}
+        <label class="check"><input type="checkbox" name="eligible_courses" value="{{ k }}"{% if k in selected %} checked{% endif %}> {{ v }}</label>
+        {% endfor %}
+      </div>
+      {% if errors.get('eligible_courses') %}<span class="error-text">{{ errors.eligible_courses }}</span>{% endif %}
+    </fieldset>
+    {{ field('min_cgpa', 'Minimum CGPA', form, errors, type='number', attrs='step="0.01" min="0" max="10" inputmode="decimal"') }}
+    {{ field('drive_date', 'Drive date', form, errors, type='date', required=True) }}
+    {{ field('response_hours', 'Company response window (hours)', form, errors, type='number', required=True, hint='The acceptance deadline is the earlier of 24 hours or this window.', attrs='min="1" max="720" step="1"') }}
+  </div>
+  <div class="form-actions"><button class="btn btn-primary" type="submit">Create drive</button><a class="btn btn-ghost" href="{{ url_for('drives.index') }}">Cancel</a></div>
+</form>
+{% endblock %}

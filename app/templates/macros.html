@@ -1,0 +1,91 @@
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endmacro %}
+
+{% macro error_summary(errors) %}
+{% if errors %}
+<div class="error-summary" role="alert" tabindex="-1" aria-labelledby="error-summary-title">
+  <h2 id="error-summary-title">Please correct {{ errors|length }} field{{ '' if errors|length == 1 else 's' }}</h2>
+  <ul>{% for key, msg in errors.items() %}<li><a href="#f-{{ key }}">{{ msg }}</a></li>{% endfor %}</ul>
+</div>
+{% endif %}
+{% endmacro %}
+
+{% macro field(name, label, form, errors, type="text", required=False, hint=None, attrs="", autocomplete="off", span=False, readonly=False) %}
+{% set err = errors.get(name) %}
+<div class="field{{ ' span-2' if span }}">
+  <label for="f-{{ name }}">{{ label }}{% if not required %} <span class="req">(optional)</span>{% endif %}</label>
+  <input class="input" id="f-{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ form.get(name) if form.get(name) is not none else '' }}"
+         autocomplete="{{ autocomplete }}"{% if required %} required{% endif %}{% if readonly %} readonly{% endif %}
+         {% if err %}aria-invalid="true"{% endif %}
+         aria-describedby="{% if hint %}h-{{ name }}{% endif %}{% if err %} e-{{ name }}{% endif %}" {{ attrs|safe }}>
+  {% if hint %}<span class="hint" id="h-{{ name }}">{{ hint }}</span>{% endif %}
+  {% if err %}<span class="error-text" id="e-{{ name }}">{{ err }}</span>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro select(name, label, options, form, errors, required=True, hint=None, blank=None, span=False) %}
+{% set err = errors.get(name) %}
+{% set current = form.get(name) if form.get(name) is not none else '' %}
+<div class="field{{ ' span-2' if span }}">
+  <label for="f-{{ name }}">{{ label }}{% if not required %} <span class="req">(optional)</span>{% endif %}</label>
+  <select class="select" id="f-{{ name }}" name="{{ name }}"{% if required %} required{% endif %}
+          {% if err %}aria-invalid="true"{% endif %} aria-describedby="{% if hint %}h-{{ name }}{% endif %}{% if err %} e-{{ name }}{% endif %}">
+    {% if blank is not none %}<option value="">{{ blank }}</option>{% endif %}
+    {% for value, text in options.items() %}
+    <option value="{{ value }}"{% if current|string == value|string %} selected{% endif %}>{{ text }}</option>
+    {% endfor %}
+  </select>
+  {% if hint %}<span class="hint" id="h-{{ name }}">{{ hint }}</span>{% endif %}
+  {% if err %}<span class="error-text" id="e-{{ name }}">{{ err }}</span>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro outcome_badge(outcome) %}
+{% if outcome == 'allow' %}<span class="badge badge-ok">Allowed</span>
+{% elif outcome == 'review' %}<span class="badge badge-review">Manual review</span>
+{% else %}<span class="badge badge-block">Blocked</span>{% endif %}
+{% endmacro %}
+
+{% macro category(cat) %}{% if cat %}<span class="cat{{ ' cat-Aplus' if cat == 'A+' }}" title="Category {{ cat }}">{{ cat }}</span>{% else %}<span class="muted">—</span>{% endif %}{% endmacro %}
+
+{% macro status_badge(code) %}
+{% set cls = {'unplaced': '', 'internship': 'badge-accent', 'fte': 'badge-accent', 'internship_fte': 'badge-solid'}[code] %}
+<span class="badge {{ cls }}">{{ code|label('placement') }}</span>
+{% endmacro %}
+
+{% macro acceptance_badge(a) %}
+{% set cls = {'pending': 'badge-review', 'accepted': 'badge-ok', 'declined': '', 'expired': 'badge-block'}[a] %}
+<span class="badge {{ cls }}">{{ a|label('acceptance') }}</span>
+{% endmacro %}
+
+{% macro decision_panel(decision, title, sub=None, open=False, uid="d") %}
+<section class="decision is-{{ decision.outcome }}" aria-labelledby="{{ uid }}-t">
+  <div class="decision-head">
+    <div class="what" id="{{ uid }}-t">{{ title }}{% if sub %}<span class="sub">{{ sub }}</span>{% endif %}</div>
+    {{ outcome_badge(decision.outcome) }}
+  </div>
+  <details class="disclosure"{% if open %} open{% endif %}>
+    <summary>{% if decision.outcome == 'allow' %}All 7 checks passed — view explanation{% else %}{{ decision.headline }}{% endif %}</summary>
+    <ul class="rules">
+      {% for r in decision.results %}
+      <li class="outcome-{{ r.outcome }}">
+        <span class="code">{{ r.code }}</span>
+        <span class="title">{{ r.title }}</span>
+        <span class="msg"><span class="rule-mark">{{ {'pass': 'Pass', 'review': 'Review', 'block': 'Block'}[r.outcome] }}</span>{{ r.message }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </details>
+</section>
+{% endmacro %}
+
+{% macro pager(page, pages, endpoint, args) %}
+{% if pages > 1 %}
+<nav class="pagination" aria-label="Pagination">
+  <span>Page {{ page }} of {{ pages }}</span>
+  <span class="actions">
+    {% if page > 1 %}<a class="btn btn-sm" href="{{ url_for(endpoint, page=page-1, **args) }}">Previous</a>{% endif %}
+    {% if page < pages %}<a class="btn btn-sm" href="{{ url_for(endpoint, page=page+1, **args) }}">Next</a>{% endif %}
+  </span>
+</nav>
+{% endif %}
+{% endmacro %}

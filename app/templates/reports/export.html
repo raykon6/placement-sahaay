@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "macros.html" import csrf, error_summary %}
+{% block title %}Secure export{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Governance</p>
+    <h1>Secure export</h1>
+    <p class="lede">Exports contain personal or salary data. Each export is restricted by role, requires a stated purpose and is recorded with a SHA-256 fingerprint of the file.</p>
+  </div>
+</div>
+<div class="split">
+  <form class="form card card-body" method="post" novalidate>
+    {{ csrf() }}
+    {{ error_summary(errors) }}
+    <fieldset class="field">
+      <legend>Dataset</legend>
+      <div class="radio-row">
+        <label class="seg"><input type="radio" name="dataset" value="students"{% if form.get('dataset', 'students') == 'students' %} checked{% endif %}><span>Student register</span></label>
+        <label class="seg"><input type="radio" name="dataset" value="offers"{% if form.get('dataset') == 'offers' %} checked{% endif %}><span>Offers and compensation</span></label>
+      </div>
+    </fieldset>
+    <div class="field" data-show-when="dataset=students">
+      <label class="check" for="f-include_contact"><input type="checkbox" id="f-include_contact" name="include_contact" value="1"{% if not has_perm('export.contact') %} disabled{% endif %}> Include mobile and email</label>
+      <span class="hint">{% if has_perm('export.contact') %}Only include contact details when strictly necessary.{% else %}Restricted to the Placement Administrator.{% endif %}</span>
+      {% if errors.get('include_contact') %}<span class="error-text">{{ errors.include_contact }}</span>{% endif %}
+    </div>
+    <div class="field">
+      <label for="f-reason">Purpose of export</label>
+      <input class="input" id="f-reason" name="reason" minlength="10" maxlength="300" value="{{ form.get('reason', '') }}" required {% if errors.get('reason') %}aria-invalid="true" aria-describedby="e-reason"{% endif %}>
+      {% if errors.get('reason') %}<span class="error-text" id="e-reason">{{ errors.reason }}</span>{% endif %}
+    </div>
+    <div class="form-actions"><button class="btn btn-primary" type="submit">Download CSV</button></div>
+  </form>
+  <aside class="stack">
+    <div class="notice"><strong>Formula-injection safe.</strong> Cells beginning with =, +, -, @ are neutralised so spreadsheets cannot execute them.</div>
+    <div class="notice"><strong>Handling.</strong> Store exports only on encrypted, institution-managed devices and delete them when the stated purpose is complete.</div>
+  </aside>
+</div>
+{% endblock %}

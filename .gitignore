@@ -1,0 +1,10 @@
+instance/
+__pycache__/
+*.pyc
+.pytest_cache/
+.claude/
+*.pem
+*.db
+keys.json
+.venv/
+venv/

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Placement rules{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Student Placement Guidelines 2026–27</p>
+    <h1>Placement rules</h1>
+    <p class="lede">The rules the policy engine applies to every application, registration and offer. Thresholds reflect the current configuration.</p>
+  </div>
+  {% if has_perm('policy.simulate') %}<div class="actions"><a class="btn btn-primary" href="{{ url_for('policy.simulate') }}">Open simulator</a></div>{% endif %}
+</div>
+
+<section class="card" aria-labelledby="cat-h">
+  <div class="card-head"><div><h2 id="cat-h">Company categories and switching</h2><p>Category is derived from annual CTC. Lower bounds are inclusive.</p></div></div>
+  <div class="card-body tight table-wrap">
+    <table class="table">
+      <thead><tr><th scope="col">Category</th><th scope="col">Package / CTC</th><th scope="col">Switching rule</th></tr></thead>
+      <tbody>
+        <tr><th scope="row"><span class="cat cat-Aplus">A+</span></th><td>≥ ₹{{ s.a_plus_min_lpa|round(2) }} LPA</td><td>No switching. Students selected in A+ are out of the placement process.</td></tr>
+        <tr><th scope="row"><span class="cat">A</span></th><td>₹{{ s.a_min_lpa|round(2) }} – {{ s.a_plus_min_lpa|round(2) }} LPA</td><td>Switching allowed only to A+ category companies.</td></tr>
+        <tr><th scope="row"><span class="cat">B</span></th><td>₹{{ s.b_min_lpa|round(2) }} – {{ s.a_min_lpa|round(2) }} LPA</td><td>Further placement allowed where the new package is at least {{ s.b_switch_multiplier }}× the existing package.</td></tr>
+        <tr><th scope="row"><span class="cat">C</span></th><td>Below ₹{{ s.b_min_lpa|round(2) }} LPA</td><td>Eligible for higher-category (B, A, A+) opportunities.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="grid grid-2 section">
+  <section class="card" aria-labelledby="ot-h">
+    <div class="card-head"><h2 id="ot-h">Offer-type restrictions</h2></div>
+    <div class="card-body tight table-wrap">
+      <table class="table">
+        <thead><tr><th scope="col">Holds</th><th scope="col">May not apply for</th><th scope="col">May apply for</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Internship (I)</th><td>Another internship-only role</td><td>FTE or I+F, subject to other rules</td></tr>
+          <tr><th scope="row">FTE (F)</th><td>Another FTE-only role</td><td>Internship roles, subject to other rules</td></tr>
+          <tr><th scope="row">I+F / PPO accepted</th><td>Any I, F or I+F role at another organisation</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section class="card" aria-labelledby="cf-h">
+    <div class="card-head"><h2 id="cf-h">Guideline conflict handling</h2></div>
+    <div class="card-body prose">
+      <p>An FTE holder in category A or B may satisfy the switching rule while the offer-type rule forbids another FTE-only role. The engine detects this and applies the configured resolution:</p>
+      <p><strong>Current setting: {{ {'review': 'refer to Placement Cell (manual review)', 'strict': 'block (offer-type rule prevails)', 'switching': 'allow (switching rule prevails)'}[s.conflict_mode] }}.</strong></p>
+    </div>
+  </section>
+</div>
+
+<section class="section card" aria-labelledby="ev-h">
+  <div class="card-head"><div><h2 id="ev-h">Evaluation order</h2><p>Every rule runs and is reported; the most severe outcome decides</p></div></div>
+  <ol class="rules">
+    <li><span class="code">R1</span><span class="title">Record status</span><span class="msg">Archived records cannot participate.</span></li>
+    <li><span class="code">R2</span><span class="title">Registration</span><span class="msg">Only students registered for the session may participate; deregistered students are blocked.</span></li>
+    <li><span class="code">R3</span><span class="title">Eligibility</span><span class="msg">Eligibility must be verified; pending verification is referred for review.</span></li>
+    <li><span class="code">R4</span><span class="title">Company criteria</span><span class="msg">Programme must be eligible for the drive and CGPA must meet any minimum.</span></li>
+    <li><span class="code">R5</span><span class="title">Attendance</span><span class="msg">An unexcused absence at any recruitment event bars the next {{ s.absence_debar_drives }} eligible drives. Officers may record emergency exceptions with a reason.</span></li>
+    <li><span class="code">R6</span><span class="title">Offer type</span><span class="msg">I / F / I+F restrictions above.</span></li>
+    <li><span class="code">R7</span><span class="title">Category switching</span><span class="msg">A+ / A / B / C rules above, based on the best FTE offer held.</span></li>
+  </ol>
+</section>
+
+<section class="section card" aria-labelledby="op-h">
+  <div class="card-head"><h2 id="op-h">Operational rules</h2></div>
+  <div class="card-body">
+    <dl class="dl">
+      <dt>Offer acceptance</dt><dd>{{ s.acceptance_window_hours }} hours or the company's stated timeline, whichever is earlier. Unanswered offers expire automatically and are flagged.</dd>
+      <dt>Declined offers</dt><dd>{{ 'Still count as a selection for policy purposes.' if s.declined_offers_count else 'Do not count as a selection.' }}</dd>
+      <dt>Reneging</dt><dd>Declining an already-accepted offer raises a suspected-violation flag.</dd>
+      <dt>Off-campus offers</dt><dd>Recorded with an NOC workflow and evaluated by the same rules.</dd>
+      <dt>Final authority</dt><dd>The engine enforces and flags. Disciplinary decisions and exceptions remain with the Placement Cell / competent authority.</dd>
+    </dl>
+  </div>
+</section>
+{% endblock %}

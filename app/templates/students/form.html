@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% from "macros.html" import csrf, field, select, error_summary %}
+{% block title %}{{ 'Edit ' ~ st.placement_id if st else 'Add student' }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="breadcrumb"><a href="{{ url_for('students.index') }}">Students</a>{% if st %} / <a href="{{ url_for('students.detail', student_id=st.id) }}">{{ st.full_name }}</a>{% endif %}</p>
+    <h1>{{ 'Edit record' if st else 'Add student' }}</h1>
+    <p class="lede">{% if st and fields|length <= 2 %}As course coordinator you can verify eligibility and CGPA for your programme. Other fields are managed by the Placement Cell.{% else %}All fields are validated on the server. Contact details are encrypted before storage.{% endif %}</p>
+  </div>
+</div>
+<div class="split">
+  <form class="form card card-body" method="post" novalidate>
+    {{ csrf() }}
+    {{ error_summary(errors) }}
+    <div class="form-grid">
+      {% if not st %}
+        {{ field('placement_id', 'Placement ID', form, errors, required=True, hint='Unique and permanent, e.g. NFSU-25-DFIS-014', attrs='maxlength="24" autocapitalize="characters" spellcheck="false"') }}
+      {% else %}
+        <div class="field"><span class="label">Placement ID</span><span class="mono">{{ st.placement_id }}</span><span class="hint">Placement IDs cannot be changed once issued.</span></div>
+      {% endif %}
+      {% if 'full_name' in fields %}{{ field('full_name', 'Full name', form, errors, required=True, attrs='maxlength="100"', autocomplete="name") }}{% endif %}
+      {% if 'mobile' in fields %}{{ field('mobile', 'Mobile number', form, errors, type='tel', required=True, hint='10-digit Indian mobile; +91 optional', attrs='maxlength="16" inputmode="tel"') }}{% endif %}
+      {% if 'email' in fields %}{{ field('email', 'Email', form, errors, type='email', required=True, attrs='maxlength="254" spellcheck="false"') }}{% endif %}
+      {% if 'course' in fields %}{{ select('course', 'Programme', COURSES, form, errors, blank='Select programme') }}{% endif %}
+      {% if 'batch' in fields %}{{ field('batch', 'Batch', form, errors, required=True, hint='e.g. 2025-27', attrs='maxlength="9"') }}{% endif %}
+      {% if 'registration_status' in fields %}{{ select('registration_status', 'Registration status', REGISTRATION, form, errors) }}{% endif %}
+      {% if 'eligibility_status' in fields %}{{ select('eligibility_status', 'Eligibility status', ELIGIBILITY, form, errors) }}{% endif %}
+      {% if 'cgpa' in fields %}{{ field('cgpa', 'CGPA', form, errors, type='number', attrs='step="0.01" min="0" max="10" inputmode="decimal"') }}{% endif %}
+      {% if 'remarks' in fields %}
+      <div class="field span-2">
+        <label for="f-remarks">Remarks <span class="req">(optional)</span></label>
+        <textarea class="textarea" id="f-remarks" name="remarks" maxlength="500" aria-describedby="h-remarks">{{ form.get('remarks') or '' }}</textarea>
+        <span class="hint" id="h-remarks">Administrative notes only. Changes are recorded in the audit trail.</span>
+      </div>
+      {% endif %}
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit">{{ 'Save changes' if st else 'Create student' }}</button>
+      <a class="btn btn-ghost" href="{{ url_for('students.detail', student_id=st.id) if st else url_for('students.index') }}">Cancel</a>
+    </div>
+  </form>
+  <aside class="stack">
+    <div class="notice"><strong>Not editable here.</strong> Placement status, packages and PPO status are derived from the offer history so they cannot be altered by editing a profile.</div>
+    <div class="notice"><strong>Duplicate detection.</strong> Placement ID, mobile number and email are each checked for uniqueness using keyed blind indexes, without decrypting stored records.</div>
+  </aside>
+</div>
+{% endblock %}

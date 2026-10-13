@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}How it works{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Guide</p>
+    <h1>How Placement Sahaay works</h1>
+    <p class="lede">A short tour of every module: what it does, who can use it, and what happens behind the scenes.</p>
+  </div>
+</div>
+
+<div class="split">
+  <div class="stack-lg">
+    <section class="card" id="g-flow" aria-labelledby="g-flow-h">
+      <div class="card-head"><h2 id="g-flow-h">The placement journey</h2></div>
+      <ol class="timeline">
+        <li><strong>1. Register and import.</strong> The Placement Cell adds students one by one or imports a CSV. Every field is validated on the server, and duplicate Placement IDs, mobile numbers and emails are rejected.</li>
+        <li><strong>2. Verify eligibility.</strong> Course coordinators confirm academic eligibility and CGPA for their own programme.</li>
+        <li><strong>3. Run drives.</strong> Officers create drives. Students apply from their portal, or officers register them. Each application passes the rule engine first.</li>
+        <li><strong>4. Record attendance.</strong> Attendance is recorded for every event. An unexcused absence bars the student from the next {{ s.absence_debar_drives }} eligible drives unless an officer records an emergency exception.</li>
+        <li><strong>5. Record offers.</strong> The server works out the category and the acceptance deadline. If an offer breaks policy, it is still recorded but flagged for the Placement Cell.</li>
+        <li><strong>6. Report and audit.</strong> Dashboards update live. Exports are controlled, and every sensitive action can be traced in the audit trail.</li>
+      </ol>
+    </section>
+
+    <section class="card" id="g-engine" aria-labelledby="g-engine-h">
+      <div class="card-head"><div><h2 id="g-engine-h">The rule engine</h2><p>Runs on every application, registration, offer and simulation</p></div></div>
+      <div class="card-body stack">
+        <p class="prose">Every check runs and reports its reason. The most severe outcome decides: <strong>Blocked</strong> beats <strong>Manual review</strong>, which beats <strong>Allowed</strong>.</p>
+        <ul class="rules">
+          <li><span class="code">R1</span><span class="title">Record</span><span class="msg">Archived records cannot take part.</span></li>
+          <li><span class="code">R2</span><span class="title">Registration</span><span class="msg">Only students registered for the session can take part.</span></li>
+          <li><span class="code">R3</span><span class="title">Eligibility</span><span class="msg">Ineligible students are blocked; pending verification goes to review.</span></li>
+          <li><span class="code">R4</span><span class="title">Company criteria</span><span class="msg">The student's programme must be eligible and their CGPA must meet the drive's minimum.</span></li>
+          <li><span class="code">R5</span><span class="title">Attendance</span><span class="msg">Active absence ban → blocked.</span></li>
+          <li><span class="code">R6</span><span class="title">Offer type</span><span class="msg">I → no other I. F → no other F. I+F (or an accepted PPO) → no roles at other organisations.</span></li>
+          <li><span class="code">R7</span><span class="title">Switching</span><span class="msg">A+ → out of the process. A → A+ only. B → at least {{ s.b_switch_multiplier }}× the current package. C → higher categories only.</span></li>
+        </ul>
+        <p class="small muted">If the offer-type rule and the switching rule disagree (an FTE holder upgrading to another FTE-only role), the case is referred to the Placement Cell by default. The administrator can change this under Policy settings.</p>
+      </div>
+    </section>
+
+    <section class="card" id="g-modules" aria-labelledby="g-mod-h">
+      <div class="card-head"><h2 id="g-mod-h">Modules</h2></div>
+      <div class="card-body tight table-wrap">
+        <table class="table">
+          <thead><tr><th scope="col">Module</th><th scope="col">What it does</th><th scope="col">Who</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Dashboard</th><td>Registered, eligible, placed and unplaced counts; placement mix; CTC and stipend statistics; pending offers with live countdowns; course and company tables.</td><td>Admin, Officer, Coordinator (own programme)</td></tr>
+            <tr><th scope="row">Students</th><td>Search and filter; profile; offer history; live eligibility for every open drive; contact details masked until revealed (each reveal is logged); archive and anonymise.</td><td>Admin, Officer; Coordinator (own programme, eligibility only)</td></tr>
+            <tr><th scope="row">Recruitment drives</th><td>Create drives (the category comes from the CTC); register students through the engine; update application status; record attendance and exceptions.</td><td>Admin, Officer</td></tr>
+            <tr><th scope="row">Offers</th><td>I, F and I+F offers; off-campus offers with NOC; deadlines with automatic expiry; acceptance, joining and PPO updates, each needing a reason.</td><td>Admin, Officer</td></tr>
+            <tr><th scope="row">Review queue</th><td>Suspected violations, guideline conflicts, absences, expired offers. Each needs a recorded decision to resolve or dismiss.</td><td>Admin, Officer</td></tr>
+            <tr><th scope="row">Eligibility simulator</th><td>"What if" checks for any student against a real or hypothetical drive. Nothing is saved.</td><td>Admin, Officer, Coordinator</td></tr>
+            <tr><th scope="row">Reports and export</th><td>Programme-wise report with totals. CSV export needs a stated purpose, is fingerprinted and logged, and neutralises spreadsheet formulas.</td><td>Admin, Officer (export)</td></tr>
+            <tr><th scope="row">Audit trail</th><td>Every login, view of sensitive data, change and export, each linked to the previous entry by a keyed hash. "Verify integrity" proves nothing was altered.</td><td>Admin, Officer</td></tr>
+            <tr><th scope="row">Users, policy, backups</th><td>Create accounts with scoped roles; tune policy thresholds (each change audited); create encrypted backups and test-restore them.</td><td>Admin</td></tr>
+            <tr><th scope="row">Student portal</th><td>Own record, offers and countdowns; every open drive with a rule-by-rule decision; Apply button checked again on the server.</td><td>Student</td></tr>
+            <tr><th scope="row">Recruiter portal</th><td>Own company's drives and applicants (name, programme, masked email); shortlist or select.</td><td>Recruiter</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <aside class="stack-lg">
+    <section class="card" aria-labelledby="g-sec-h">
+      <div class="card-head"><h2 id="g-sec-h">Security at a glance</h2></div>
+      <ul class="timeline">
+        <li><strong>Sign-in.</strong> Passwords are hashed with scrypt. Optional authenticator-app codes. Lockout after 5 failures.</li>
+        <li><strong>Sessions.</strong> End after 15 minutes idle; revoked at sign-out; tied to your browser.</li>
+        <li><strong>Least privilege.</strong> Each role sees only its scope, and the server checks this on every request.</li>
+        <li><strong>Encryption.</strong> Mobile numbers and emails are stored encrypted (AES-256-GCM).</li>
+        <li><strong>Forms.</strong> Validated on the server; protected against SQL injection, scripts and forged requests.</li>
+        <li><strong>Audit.</strong> Append-only and tamper-evident.</li>
+        <li><strong>Backups.</strong> Encrypted and test-restorable.</li>
+      </ul>
+    </section>
+    <section class="card" aria-labelledby="g-try-h">
+      <div class="card-head"><h2 id="g-try-h">Try it</h2></div>
+      <div class="card-body stack small">
+        <p>Open the <strong>Eligibility simulator</strong> and enter <span class="mono">NFSU-25-CS-003</span>. This student holds a B offer at ₹7.5 LPA. Compare a 9 LPA role (blocked) with a 20 LPA I+F role (allowed).</p>
+        <p>Sign in as <span class="mono">student.cs003</span> and try to apply to Accenture. The server refuses and logs the attempt.</p>
+        <p>Open the <strong>Audit trail</strong> and select <strong>Verify integrity</strong>.</p>
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}

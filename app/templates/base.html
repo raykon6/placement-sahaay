@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>{% block title %}Placement Sahaay{% endblock %} · Placement Sahaay</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Open+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<div class="utility">
+  <div class="wrap">
+    <span class="tag"><b>NFSU</b><span>NFSU Gandhinagar · Student Placement Cell · Session 2026–27</span></span>
+    {% if g.user %}
+    <div class="who">
+      <span><strong>{{ g.user.display_name }}</strong> · {{ g.user.role|label('role') }}{% if g.user.course_scope %} · {{ g.user.course_scope|label('course') }}{% endif %}</span>
+      <span class="sep" aria-hidden="true"></span>
+      <a href="{{ url_for('auth.account') }}">Account security</a>
+      <span class="sep" aria-hidden="true"></span>
+      <form class="inline-form" method="post" action="{{ url_for('auth.logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="link-btn" type="submit">Sign out</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<header class="masthead">
+  <div class="wrap">
+    <a class="brand" href="{{ url_for('main.index') if g.user else url_for('auth.login') }}">
+      <img class="brand-mark" src="{{ url_for('static', filename='img/gujarat-mark.png') }}" alt="" width="44" height="44">
+      <span class="brand-text">
+        <span class="brand-name">Placement <span>Sahaay</span></span>
+        <span class="brand-sub">Student Placement Cell · NFSU Gandhinagar</span>
+      </span>
+    </a>
+    {% if g.user %}
+    {% macro link(endpoint, text, prefix=None, count=None) %}
+      {% set cur = request.endpoint or '' %}{% set active = cur == endpoint or (prefix and cur.startswith(prefix)) %}
+      <li><a href="{{ url_for(endpoint) }}"{% if active %} aria-current="page"{% endif %}><span>{{ text }}</span>{% if count %}<span class="count">{{ count }}</span>{% endif %}</a></li>
+    {% endmacro %}
+    {% macro group(label, prefixes) %}
+      {% set cur = request.endpoint or '' %}{% set ns = namespace(active=false) %}
+      {% for p in prefixes %}{% if cur.startswith(p) %}{% set ns.active = true %}{% endif %}{% endfor %}
+      <li><details class="menu"><summary{% if ns.active %} class="is-active"{% endif %}>{{ label }}</summary>
+        <ul class="menu-list">{{ caller() }}</ul></details></li>
+    {% endmacro %}
+    <button class="btn btn-sm nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-nav">Menu</button>
+    <nav class="nav" id="primary-nav" aria-label="Main navigation">
+      <ul>
+        {% if has_perm('dashboard') %}
+          {{ link('main.dashboard', 'Dashboard') }}
+          {% call group('Records', ['students.', 'drives.', 'offers.', 'reports.index']) %}
+            {{ link('students.index', 'Students', 'students.') }}
+            {{ link('drives.index', 'Recruitment drives', 'drives.') }}
+            {{ link('offers.index', 'Offers', 'offers.') }}
+            {{ link('reports.index', 'Reports', 'reports.index') }}
+          {% endcall %}
+          {% call group('Policy', ['policy.']) %}
+            {{ link('policy.flags', 'Review queue', 'policy.flags') }}
+            {{ link('policy.simulate', 'Eligibility simulator') }}
+            {{ link('policy.rules', 'Placement rules') }}
+            {% if has_perm('policy.edit') %}{{ link('policy.settings', 'Policy settings') }}{% endif %}
+          {% endcall %}
+          {% if has_perm('audit.read') or has_perm('export') %}
+          {% call group('Governance', ['admin.', 'reports.export']) %}
+            {% if has_perm('export') %}{{ link('reports.export', 'Secure export') }}{% endif %}
+            {% if has_perm('audit.read') %}{{ link('admin.audit_log', 'Audit trail', 'admin.audit') }}{% endif %}
+            {% if has_perm('user.manage') %}{{ link('admin.users', 'Users and roles', 'admin.user') }}{% endif %}
+            {% if has_perm('backup.manage') %}{{ link('admin.backups', 'Backups', 'admin.backup') }}{% endif %}
+          {% endcall %}
+          {% endif %}
+        {% elif has_perm('self.portal') %}
+          {{ link('main.me', 'My placement') }}
+          {{ link('policy.rules', 'Placement rules') }}
+        {% elif has_perm('recruiter.portal') %}
+          {{ link('main.recruiter', 'My drives', 'main.recruiter') }}
+          {{ link('policy.rules', 'Placement rules') }}
+        {% endif %}
+        {{ link('main.guide', 'How it works') }}
+      </ul>
+    </nav>
+    {% endif %}
+    <img class="crest" src="{{ url_for('static', filename='img/nfsu-logo.png') }}" alt="National Forensic Sciences University emblem" width="58" height="58">
+  </div>
+</header>
+
+{% if g.user %}
+<main class="main" id="main" tabindex="-1">
+  <div class="content">
+    {% set messages = pop_flashes() %}
+    {% if messages %}
+    <div class="flashes" role="status" aria-live="polite">
+      {% for cat, msg in messages %}
+      <div class="flash flash-{{ cat }}">
+        <span><strong>{{ {'success': 'Done.', 'error': 'Error.', 'warning': 'Attention.', 'info': 'Note.'}.get(cat, '') }}</strong>{{ msg }}</span>
+        <button class="btn btn-ghost btn-sm dismiss" type="button" data-dismiss hidden aria-label="Dismiss message">Dismiss</button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </div>
+</main>
+{% else %}
+<main id="main" tabindex="-1">{% block bare %}{% endblock %}</main>
+{% endif %}
+
+<footer class="site-foot">
+  <div class="wrap">
+    <span><strong>Placement Sahaay</strong> · Student Placement Cell, National Forensic Sciences University, Gandhinagar</span>
+    <span>Authorised use only · Activity is logged</span>
+  </div>
+</footer>
+</body>
+</html>

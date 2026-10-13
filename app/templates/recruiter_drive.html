@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "macros.html" import csrf %}
+{% block title %}{{ drive.title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="breadcrumb"><a href="{{ url_for('main.recruiter') }}">My drives</a> / {{ drive.title }}</p>
+    <h1>{{ drive.title }}</h1>
+    <p class="lede">{{ drive.company_name }} · {{ drive.offer_type|label('offer_type_long') }} · {{ drive.drive_date }}</p>
+  </div>
+</div>
+<div class="card table-wrap">
+  <table class="table">
+    <caption class="sr-only">Applicants</caption>
+    <thead><tr><th scope="col">Candidate</th><th scope="col">Programme</th><th scope="col">Email</th><th scope="col">Status</th><th scope="col">Update</th></tr></thead>
+    <tbody>
+    {% for a in applicants %}
+      <tr>
+        <td class="primary">{{ a.full_name }}<span class="sub mono">{{ a.placement_id }}</span></td>
+        <td>{{ a.course|label('course') }} <span class="sub">{{ a.batch }}</span></td>
+        <td class="mono small">{{ a.email_masked }}</td>
+        <td>{{ a.status|label('application') }}</td>
+        <td>
+          <form class="actions" method="post" action="{{ url_for('main.recruiter_update', app_id=a.id) }}">
+            {{ csrf() }}
+            <label class="sr-only" for="s-{{ a.id }}">Status for {{ a.full_name }}</label>
+            <select class="select" id="s-{{ a.id }}" name="status">
+              <option value="shortlisted"{% if a.status == 'shortlisted' %} selected{% endif %}>Shortlisted</option>
+              <option value="selected"{% if a.status == 'selected' %} selected{% endif %}>Selected</option>
+              <option value="rejected"{% if a.status == 'rejected' %} selected{% endif %}>Not selected</option>
+            </select>
+            <button class="btn btn-sm" type="submit">Save</button>
+          </form>
+        </td>
+      </tr>
+    {% else %}<tr><td colspan="5"><div class="empty">No applicants yet.</div></td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="small muted section">Selections are confirmed and offers recorded by the NFSU Placement Cell. Communicate with candidates through the Placement Cell.</p>
+{% endblock %}

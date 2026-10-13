@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% macro body() %}
+<div class="error-page">
+  <p class="code">Error {{ code }}</p>
+  <h1>{{ title }}</h1>
+  <p>{{ message }}</p>
+  <a class="btn btn-primary" href="{{ url_for('main.index') if g.user else url_for('auth.login') }}">{{ 'Return to dashboard' if g.user else 'Go to sign in' }}</a>
+</div>
+{% endmacro %}
+{% block content %}{{ body() }}{% endblock %}
+{% block bare %}{{ body() }}{% endblock %}

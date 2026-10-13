@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% from "macros.html" import category %}
+{% block title %}My drives{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Recruiter portal</p>
+    <h1>Your recruitment drives</h1>
+    <p class="lede">You can see applicants to your organisation's drives only. Contact numbers and compensation from other organisations are never shared.</p>
+  </div>
+</div>
+<div class="card table-wrap">
+  <table class="table">
+    <thead><tr><th scope="col">Role</th><th scope="col">Type</th><th scope="col">Category</th><th scope="col">Date</th><th scope="col">Status</th><th scope="col" class="num">Applicants</th></tr></thead>
+    <tbody>
+    {% for d in drives %}
+      <tr><td class="primary"><a href="{{ url_for('main.recruiter_drive', drive_id=d.id) }}">{{ d.title }}</a><span class="sub">{{ d.company_name }}</span></td>
+        <td><span class="badge plain">{{ d.offer_type|label('offer_type') }}</span></td><td>{{ category(d.category) }}</td><td>{{ d.drive_date }}</td>
+        <td>{{ d.status|capitalize }}</td><td class="num">{{ d.applicants }}</td></tr>
+    {% else %}<tr><td colspan="6"><div class="empty">No drives yet. The Placement Cell creates drives on your behalf.</div></td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

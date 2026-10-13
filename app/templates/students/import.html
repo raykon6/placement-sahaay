@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% from "macros.html" import csrf %}
+{% block title %}Import students{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="breadcrumb"><a href="{{ url_for('students.index') }}">Students</a> / Import</p>
+    <h1>Import student records</h1>
+    <p class="lede">Imports are all-or-nothing: if any row fails validation or duplicates an existing record, nothing is written.</p>
+  </div>
+</div>
+<div class="split">
+  <div class="stack-lg">
+    {% if errors %}
+    <div class="error-summary" role="alert" tabindex="-1">
+      <h2>{{ errors|length }} problem{{ '' if errors|length == 1 else 's' }} found — nothing was imported</h2>
+      <div class="table-wrap">
+        <table class="table small">
+          <thead><tr><th scope="col">Row</th><th scope="col">Field</th><th scope="col">Problem</th></tr></thead>
+          <tbody>{% for row, f, msg in errors[:100] %}<tr><td class="mono">{{ row or '—' }}</td><td class="mono">{{ f }}</td><td>{{ msg }}</td></tr>{% endfor %}</tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+    <form class="form card card-body" method="post" enctype="multipart/form-data" novalidate>
+      {{ csrf() }}
+      <div class="field">
+        <label for="f-file">CSV file</label>
+        <input class="input" id="f-file" name="file" type="file" accept=".csv,text/csv" required aria-describedby="h-file">
+        <span class="hint" id="h-file">UTF-8, at most 1 MB and 2,000 rows.</span>
+      </div>
+      <div class="form-actions"><button class="btn btn-primary" type="submit">Validate and import</button><a class="btn btn-ghost" href="{{ url_for('students.index') }}">Cancel</a></div>
+    </form>
+  </div>
+  <aside class="card">
+    <div class="card-head"><h2>Required header</h2></div>
+    <div class="card-body stack">
+      <p class="hash">{{ columns|join(',') }}</p>
+      <dl class="dl small">
+        <dt>course</dt><dd>{{ COURSES.keys()|join(', ') }}</dd>
+        <dt>registration_status</dt><dd>registered, deregistered, not_registered</dd>
+        <dt>eligibility_status</dt><dd>eligible, ineligible, pending</dd>
+        <dt>cgpa</dt><dd>0–10, may be blank</dd>
+      </dl>
+    </div>
+  </aside>
+</div>
+{% endblock %}
