@@ -32,18 +32,18 @@ PERMISSIONS = {
         "student.anonymize", "student.import", "student.eligibility", "export", "export.contact",
         "drive.read", "drive.write", "application.write", "offer.read", "offer.write", "attendance.write",
         "attendance.except", "flag.read", "flag.resolve", "policy.read", "policy.edit", "policy.simulate",
-        "audit.read", "user.manage", "backup.manage",
+        "audit.read", "user.manage", "backup.manage", "registration.review", "outbox.read",
     },
     "officer": {
         "dashboard", "student.read", "student.contact", "student.comp", "student.write", "student.archive",
         "student.import", "student.eligibility", "export", "drive.read", "drive.write", "application.write",
         "offer.read", "offer.write", "attendance.write", "attendance.except", "flag.read", "flag.resolve",
-        "policy.read", "policy.simulate", "audit.read",
+        "policy.read", "policy.simulate", "audit.read", "registration.review",
     },
     # Scoped to users.course_scope in object-level checks.
     "coordinator": {
         "dashboard", "student.read", "student.contact", "student.comp", "student.eligibility",
-        "drive.read", "offer.read", "flag.read", "policy.read", "policy.simulate",
+        "drive.read", "offer.read", "flag.read", "policy.read", "policy.simulate", "registration.review",
     },
     # Scoped to users.company_id: sees only applicants to its own drives.
     "recruiter": {"recruiter.portal", "policy.read"},

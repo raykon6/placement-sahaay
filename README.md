@@ -11,7 +11,7 @@ pip install -r requirements.txt
 python scripts/seed.py          # demo data: 44 students, 13 drives, 5 accounts
 python run.py --http            # http://127.0.0.1:5000  (local development; add --port 5050 to change)
 python run.py                   # https://127.0.0.1:8443 (self-signed dev certificate)
-python -m pytest -q tests       # 86 tests
+python -m pytest -q tests       # 114 tests
 ```
 
 Demo accounts (password `Demo-Placement-2026`; change it with `PG_DEMO_PASSWORD` before seeding any shared instance):
@@ -28,6 +28,7 @@ Suggested demo path: sign in as `admin`, open **Eligibility simulator**, and eva
 
 ## What is in the box
 
+- **Self-registration**: students apply with their enrollment number and official e-mail (unique on the platform), can verify the e-mail with a one-time code, and are approved by their programme coordinator. Approved students sign in with their enrollment number or e-mail. Configure real e-mail with `PG_SMTP_HOST`, `PG_SMTP_PORT`, `PG_SMTP_USER`, `PG_SMTP_PASSWORD` and `PG_MAIL_FROM`; without these, messages go to a development outbox.
 - **Student database**: search and filters, create, update, archive, retention-based anonymisation, and validated all-or-nothing CSV import.
 - **Policy engine** (`app/policy.py`): seven rules (record, registration, eligibility, company criteria, attendance debarment, offer type, category switching) with a reason for each, and detection of conflicts within the guidelines.
 - **Offers**: I, F and I+F offers, PPO, off-campus offers with NOC tracking, acceptance deadlines (24 h or the company's timeline, whichever is earlier) with automatic expiry, joining status, and reneging flags.
@@ -47,11 +48,13 @@ app/
   audit.py         HMAC hash-chained audit log
   crypto.py        AES-256-GCM fields, blind indexes, backup encryption
   validators.py    server-side input validation
+  registration.py  self-registration, e-mail OTP, approval
+  mailer.py        SMTP or development outbox
   backup.py        encrypted backup and verified restore
   routes/          auth, main (dashboard and portals), students, drives, offers, policy, reports, admin
   templates/ static/
 scripts/           seed, restore_backup, gen_cert
-tests/             test_policy, test_security, test_workflow
+tests/             test_policy, test_security, test_workflow, test_registration
 docs/TECHNICAL.md  architecture, schema, controls, testing, limitations
 docs/FEATURE_GUIDE.md  every feature and how it works
 ```

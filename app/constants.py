@@ -15,6 +15,8 @@ COURSE_SHORT = {
     "MSC_CS": "M.Sc. CS",
     "MSC_DFIS": "M.Sc. DFIS",
 }
+COURSE_CODE = {"MTECH_CS": "CS", "MTECH_AIDS": "AIDS", "BTECH_MTECH_CSE": "CSE", "MSC_CS": "MSCCS", "MSC_DFIS": "DFIS"}
+REQUEST_STATUS = {"pending": "Pending review", "approved": "Approved", "rejected": "Rejected"}
 REGISTRATION = {"registered": "Registered", "deregistered": "Deregistered", "not_registered": "Not registered"}
 ELIGIBILITY = {"eligible": "Eligible", "ineligible": "Ineligible", "pending": "Pending verification"}
 OFFER_TYPES = {"I": "Internship (I)", "F": "Full-time (F)", "IF": "Internship + FTE (I+F)"}

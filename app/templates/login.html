@@ -19,8 +19,8 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
         <div class="field">
-          <label for="f-username">Username</label>
-          <input class="input" id="f-username" name="username" type="text" value="{{ username or '' }}" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="64" required autofocus>
+          <label for="f-username">Username, enrollment number or official e-mail</label>
+          <input class="input" id="f-username" name="username" type="text" value="{{ username or '' }}" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="254" required autofocus>
         </div>
         <div class="field">
           <label for="f-password">Password</label>
@@ -32,6 +32,10 @@
         <button class="btn btn-primary btn-block" type="submit">Sign in</button>
       </form>
       <p class="small muted">Five failed attempts lock the account for 15 minutes. Sessions end after 15 minutes of inactivity.</p>
+      <div class="register-cta">
+        <span>New student?</span>
+        <a class="btn btn-gold btn-block" href="{{ url_for('register.form') }}">Register for placements</a>
+      </div>
     </div>
   </section>
 </div>

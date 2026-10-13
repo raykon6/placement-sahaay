@@ -16,8 +16,10 @@
     <div class="form-grid">
       {% if not st %}
         {{ field('placement_id', 'Placement ID', form, errors, required=True, hint='Unique and permanent, e.g. NFSU-25-DFIS-014', attrs='maxlength="24" autocapitalize="characters" spellcheck="false"') }}
+        {{ field('enrollment_no', 'Enrollment number', form, errors, hint='University enrollment number; unique and permanent', attrs='maxlength="24" autocapitalize="characters" spellcheck="false"') }}
       {% else %}
         <div class="field"><span class="label">Placement ID</span><span class="mono">{{ st.placement_id }}</span><span class="hint">Placement IDs cannot be changed once issued.</span></div>
+        <div class="field"><span class="label">Enrollment number</span><span class="mono">{{ st.enrollment_no or '—' }}</span><span class="hint">Linked to the official e-mail; cannot be changed.</span></div>
       {% endif %}
       {% if 'full_name' in fields %}{{ field('full_name', 'Full name', form, errors, required=True, attrs='maxlength="100"', autocomplete="name") }}{% endif %}
       {% if 'mobile' in fields %}{{ field('mobile', 'Mobile number', form, errors, type='tel', required=True, hint='10-digit Indian mobile; +91 optional', attrs='maxlength="16" inputmode="tel"') }}{% endif %}

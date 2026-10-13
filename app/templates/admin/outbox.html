@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Development outbox{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Governance</p>
+    <h1>Development outbox</h1>
+    <p class="lede">E-mail delivery is not configured (no SMTP server), so outgoing messages are saved here instead. This page disappears once <span class="mono">PG_SMTP_HOST</span> is set or <span class="mono">APP_ENV=production</span>.</p>
+  </div>
+</div>
+<div class="stack">
+{% for m in mails %}
+  <article class="card">
+    <div class="card-head"><div><h2>{{ m.subject }}</h2><p>To <span class="mono">{{ m.to }}</span> · {{ m.name[:8] }}</p></div></div>
+    <div class="card-body"><pre class="mail-body">{{ m.body }}</pre></div>
+  </article>
+{% else %}
+  <div class="card"><div class="empty"><strong>No messages</strong>Messages appear here when the system sends e-mail.</div></div>
+{% endfor %}
+</div>
+{% endblock %}

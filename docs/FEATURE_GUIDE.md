@@ -7,6 +7,7 @@ Contents
 1. [What Placement Sahaay is](#1-what-placement-sahaay-is)
 2. [Roles and what each one sees](#2-roles-and-what-each-one-sees)
 3. [Signing in and account security](#3-signing-in-and-account-security)
+   - [Student self-registration](#3a-student-self-registration)
 4. [Layout and navigation](#4-layout-and-navigation)
 5. [Dashboard](#5-dashboard)
 6. [Students](#6-students)
@@ -53,6 +54,7 @@ The system flags suspected violations, but it does not punish anyone. Final deci
 | **Course Coordinator** | Faculty for one programme | One programme | Read students, offers and drives of their programme; verify eligibility and CGPA; use the simulator |
 | **Company / Recruiter** | Company HR | One company | See only their company's drives and applicants (name, programme, masked email); shortlist or select |
 | **Student** | Each registered student | Own record | View own record and offers; see an explained eligibility decision for each open drive; apply |
+| *Applicant* | Anyone with an official NFSU e-mail | Own request | Submit a registration request, verify the e-mail by OTP, track the status |
 
 The server checks permissions on every request. The interface hides buttons a role cannot use, but that is only a convenience. Hiding a button is not what secures it.
 
@@ -83,6 +85,44 @@ From then on, sign-in asks for a code after the password. Codes change every 30 
 - A session ends after **15 minutes of inactivity** or **8 hours** in total, whichever comes first.
 - **Sign out** destroys the session on the server, not just in your browser.
 - A session is tied to the browser that created it. If its cookie is copied into another browser, the session is revoked.
+
+---
+
+## 3a. Student self-registration
+
+New students can request an account themselves instead of waiting for the Placement Cell to create one.
+
+### Applying (no sign-in needed)
+1. On the sign-in page, select **Register for placements**.
+2. Fill in: **enrollment number**, full name, **official e-mail**, mobile, programme, batch, CGPA (optional) and a password of your choice. Then tick the consent box.
+3. Submit. You land on a private **status page**. Bookmark it; the link is also included in the e-mail you receive.
+
+### Identity rules
+- **The enrollment number is unique on the platform.** It is checked against existing students, existing accounts and other pending requests. Spaces, hyphens and slashes are ignored, and letters are upper-cased, so `2501 03-0004` and `2501030004` count as the same number.
+- **The official e-mail is unique and must be a university address.** The default domain is `@nfsu.ac.in`, and subdomains such as `@students.nfsu.ac.in` also count. Look-alikes such as `@evilnfsu.ac.in` are rejected. The domain list is set with `PG_OFFICIAL_EMAIL_DOMAINS`.
+- The mobile number must not belong to another student.
+- After approval, the enrollment number and the e-mail are permanently linked to the student record. Neither can be edited afterwards.
+
+### Optional e-mail verification (OTP)
+- A **6-digit code** is e-mailed to the official address as soon as the request is submitted. Entering it on the status page marks the address as **verified**, which the coordinator sees as a badge.
+- Codes expire after **10 minutes** and work once. After **5** wrong attempts a new code is needed. A new code can be requested every **60 seconds**, at most **5** times per request.
+- Codes are never stored in readable form; only a keyed hash (HMAC) is kept.
+- Verification is optional by default. Set `PG_REQUIRE_EMAIL_VERIFICATION=1` to make it mandatory before approval.
+- **E-mail delivery:** set `PG_SMTP_HOST`, `PG_SMTP_PORT`, `PG_SMTP_USER`, `PG_SMTP_PASSWORD` and `PG_MAIL_FROM` to send real mail (STARTTLS). Without them the server runs in **development mode**: messages are saved to `instance/outbox/`, and the administrator can read them under **Governance → Development outbox**. That page disappears once SMTP is configured or `APP_ENV=production`.
+
+### Review and approval
+- **Records → Registration requests**. The menu shows a count of pending requests. Coordinators see only their own programme; officers and administrators see all programmes.
+- Each request shows the name, enrollment number, programme, batch, masked e-mail and mobile, self-reported CGPA, and whether the e-mail is verified. Any **identity conflict** found since submission is highlighted, and the Approve button is disabled.
+- **Approve** (optional note) does all of the following in a single transaction:
+  - creates the student record with a new **Placement ID** (`NFSU-<batch year>-<programme>-<number>`)
+  - sets registration to *Registered* and eligibility to *Pending verification*, so the coordinator still verifies academic eligibility
+  - creates the student's login, with the enrollment number as username and the password they chose
+  - records the decision in the audit trail and e-mails the student
+- **Reject** needs a reason, which is e-mailed to the applicant. Rejected applicants can submit a corrected request.
+- After approval, students can sign in with **either their enrollment number or their official e-mail**.
+
+### Abuse protection
+Submissions are limited to 5 per minute per IP address, with 10 per minute for code attempts. A hidden "honeypot" field catches simple bots. All input is validated on the server, the CSRF token is required, and contact data is encrypted. The applicant's password hash is deleted from the request once it is decided. Every step (submit, code sent, verified, failed, approve, reject) is written to the audit trail.
 
 ---
 
@@ -425,10 +465,11 @@ A change and its audit record are always committed together. If either fails, bo
 
 ## 21. Testing
 
-Run `python -m pytest -q tests`. There are 86 automated tests:
+Run `python -m pytest -q tests`. There are 114 automated tests:
 
 - **Policy engine (34):** every category boundary, including ₹11.25 vs ₹11.24 for the 1.5× rule; all offer-type combinations; PPO as I+F; conflict modes; declined-offer counting; registration, eligibility, CGPA and debarment rules.
 - **Security (40):** real attacks against the running app: SQL injection, stored XSS, CSRF, cross-origin posts, IDOR, a student changing their own status, forged applications, mass assignment, privilege escalation, session fixation and replay, idle timeout, browser binding, MFA replay, lockout, rate limiting, encryption at rest, ciphertext swapping, export controls, CSV injection, audit tampering, backup corruption and path traversal.
+- **Registration (28):** official-domain and format checks; uniqueness of enrollment number and e-mail across the platform; one pending request per identity; honeypot; rate limit; OTP success, expiry, attempt lockout, resend cooldown and hash-only storage; coordinator scoping; approval creating a student and login; sign-in by enrollment number or e-mail; rejection; double-approval prevention; mandatory-verification mode; outbox access.
 - **Workflows (12):** registration under policy, recorded approvals, debarment and exceptions, server-derived offer terms, deadline rule, expiry, reneging, statistics, audited policy changes, anonymisation, and guide access for every role.
 
 ---

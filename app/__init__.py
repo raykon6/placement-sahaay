@@ -7,7 +7,7 @@ from . import db, security
 from .config import Config, load_keys
 from .constants import (ACCEPTANCE, APPLICATION, ATTENDANCE, COURSE_SHORT, COURSES, ELIGIBILITY, EVENTS,
                         FLAG_KINDS, IST, JOINING, NOC, OFFER_TYPE_SHORT, OFFER_TYPES, PLACEMENT_STATUS, PPO,
-                        REGISTRATION, ROLES, parse_ts)
+                        REGISTRATION, REQUEST_STATUS, ROLES, parse_ts)
 
 ERROR_TEXT = {
     400: ("Request rejected", "The request could not be processed."),
@@ -39,11 +39,22 @@ def create_app(overrides: dict | None = None) -> Flask:
         db.init_schema(db.get_db())
     security.init_app(app)
 
-    from .routes import admin, auth, drives, main, offers, policy_views, reports, students
-    for bp in (auth.bp, main.bp, students.bp, drives.bp, offers.bp, policy_views.bp, reports.bp, admin.bp):
+    from .routes import admin, auth, drives, main, offers, policy_views, register, reports, students
+    for bp in (auth.bp, main.bp, students.bp, drives.bp, offers.bp, policy_views.bp, reports.bp, admin.bp, register.bp):
         app.register_blueprint(bp)
 
     _register_filters(app)
+
+    @app.context_processor
+    def _nav_counts():
+        from flask import g
+        from . import mailer, registration
+        from .security import has_perm
+        user = g.get("user")
+        if not user or not has_perm("registration.review", user):
+            return {}
+        return {"pending_registrations": registration.pending_count(user),
+                "outbox_enabled": mailer.outbox_enabled()}
 
     for code, (title, message) in ERROR_TEXT.items():
         def handler(err, code=code, title=title, message=message):
@@ -57,7 +68,8 @@ def _register_filters(app):
     vocab = {"course": COURSE_SHORT, "course_long": COURSES, "registration": REGISTRATION, "eligibility": ELIGIBILITY,
              "offer_type": OFFER_TYPE_SHORT, "offer_type_long": OFFER_TYPES, "acceptance": ACCEPTANCE,
              "joining": JOINING, "ppo": PPO, "noc": NOC, "application": APPLICATION, "event": EVENTS,
-             "attendance": ATTENDANCE, "flag_kind": FLAG_KINDS, "role": ROLES, "placement": PLACEMENT_STATUS}
+             "attendance": ATTENDANCE, "flag_kind": FLAG_KINDS, "role": ROLES, "placement": PLACEMENT_STATUS,
+             "request_status": REQUEST_STATUS}
 
     @app.template_filter("label")
     def label(value, kind):

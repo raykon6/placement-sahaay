@@ -55,6 +55,9 @@ def duplicate_errors(data: dict, exclude_id: int | None = None) -> dict:
     if "placement_id" in data and query("SELECT 1 FROM students WHERE placement_id = ? AND id != ?",
                                         (data["placement_id"], ex), one=True):
         errors["placement_id"] = "A student with this Placement ID already exists."
+    if data.get("enrollment_no") and query("SELECT 1 FROM students WHERE enrollment_no = ? AND id != ?",
+                                           (data["enrollment_no"], ex), one=True):
+        errors["enrollment_no"] = "This enrollment number is already linked to another student."
     if "mobile" in data and query("SELECT 1 FROM students WHERE mobile_index = ? AND id != ?",
                                   (blind_index(data["mobile"], "mobile"), ex), one=True):
         errors["mobile"] = "This mobile number is already registered to another student."
@@ -72,10 +75,10 @@ def insert_student(data: dict) -> int:
     now = now_iso()
     cols = _contact_columns(data["placement_id"], data["mobile"], data["email"])
     cur = execute(
-        "INSERT INTO students (placement_id, full_name, mobile_enc, mobile_index, mobile_masked, email_enc,"
+        "INSERT INTO students (placement_id, enrollment_no, full_name, mobile_enc, mobile_index, mobile_masked, email_enc,"
         " email_index, email_masked, course, batch, registration_status, eligibility_status, cgpa, remarks,"
-        " created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-        (data["placement_id"], data["full_name"], cols["mobile_enc"], cols["mobile_index"], cols["mobile_masked"],
+        " created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (data["placement_id"], data.get("enrollment_no"), data["full_name"], cols["mobile_enc"], cols["mobile_index"], cols["mobile_masked"],
          cols["email_enc"], cols["email_index"], cols["email_masked"], data["course"], data["batch"],
          data["registration_status"], data["eligibility_status"], data.get("cgpa"), data.get("remarks"), now, now),
     )
@@ -86,7 +89,8 @@ def create_student(data: dict) -> int:
     with transaction():
         sid = insert_student(data)
         audit.record("student.create", "student", sid, {
-            "placement_id": data["placement_id"], "course": data["course"], "batch": data["batch"],
+            "placement_id": data["placement_id"], "enrollment_no": data.get("enrollment_no"),
+            "course": data["course"], "batch": data["batch"],
             "registration_status": data["registration_status"], "eligibility_status": data["eligibility_status"]})
     return sid
 

@@ -423,3 +423,25 @@ details.disclosure > summary:focus-visible { outline: 2px solid var(--navy); out
 .auth-aside.hero h1::after { margin: 18px auto 0; }
 .hero-label { display: inline-block; background: var(--gold); color: var(--navy); font: 600 14px/1 var(--font-head); letter-spacing: .14em; text-transform: uppercase; padding: 8px 14px; }
 @media (max-width: 960px) { .crest { height: 44px; } }
+
+/* registration */
+.auth-card.wide { max-width: 680px; }
+.hp-field { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.register-cta { display: flex; flex-direction: column; gap: 8px; padding-top: 18px; border-top: 1px solid var(--line); font: 600 13px/1.3 var(--font-head); color: var(--navy); }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.steps li { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; font-size: 13px; color: var(--ink-3); }
+.steps li b { display: block; font: 600 12px/1.3 var(--font-head); text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); margin-bottom: 4px; }
+.steps li.done { border-color: #b6cfc0; background: var(--ok-tint); color: var(--ok); }
+.steps li.done b { color: var(--ok); }
+.steps li.current { border-color: var(--navy); background: var(--surface); color: var(--navy); }
+.steps li.current b { color: var(--navy); }
+.steps li.failed { border-color: #e0bcbc; background: var(--danger-tint); color: var(--danger); }
+.otp-input { font-family: var(--font-mono); font-size: 22px; letter-spacing: .4em; text-align: center; max-width: 220px; }
+.mail-body { white-space: pre-wrap; font-family: var(--font-mono); font-size: 12.5px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 960px) { .steps { grid-template-columns: minmax(0, 1fr); } }
+.section-gap { margin-bottom: 20px; }
+
+/* sticky footer and natural-width buttons in stacked forms */
+body { display: flex; flex-direction: column; min-height: 100vh; }
+body > main { flex: 1 0 auto; }
+.form > .btn:not(.btn-block) { align-self: flex-start; }

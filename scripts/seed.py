@@ -93,7 +93,8 @@ def main(reset: bool):
                     if course == "MTECH_AIDS" and i == 5:
                         elig = "ineligible"
                     sid[pid] = services.insert_student({
-                        "placement_id": pid, "full_name": name, "mobile": f"9{rng.randint(100000000, 999999999)}",
+                        "placement_id": pid, "enrollment_no": f"25{list(COURSE_CODE).index(course) + 1:02d}{i:04d}",
+                        "full_name": name, "mobile": f"9{rng.randint(100000000, 999999999)}",
                         "email": f"{name.split()[0].lower()}.{name.split()[1].lower()}{n}@students.nfsu.ac.in",
                         "course": course, "batch": BATCH[course], "registration_status": reg,
                         "eligibility_status": elig, "cgpa": round(rng.uniform(6.4, 9.6), 2), "remarks": None})

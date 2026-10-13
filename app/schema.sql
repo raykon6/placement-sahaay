@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS companies (
 CREATE TABLE IF NOT EXISTS students (
     id                   INTEGER PRIMARY KEY,
     placement_id         TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    enrollment_no        TEXT COLLATE NOCASE,          -- university enrollment number (unique when set)
     full_name            TEXT NOT NULL,
     -- Contact details: AES-256-GCM ciphertext + keyed blind index for
     -- duplicate detection + a masked form for low-privilege display.
@@ -154,6 +155,44 @@ CREATE TABLE IF NOT EXISTS policy_settings (
     updated_at  TEXT NOT NULL,
     updated_by  INTEGER REFERENCES users(id)
 );
+
+-- Self-service registration requests awaiting Placement Cell approval.
+-- Contact details are encrypted exactly as for students; the password chosen
+-- by the applicant is stored only as an scrypt hash; the e-mail OTP is stored
+-- only as an HMAC and expires.
+CREATE TABLE IF NOT EXISTS registration_requests (
+    id              INTEGER PRIMARY KEY,
+    ref_hash        TEXT NOT NULL UNIQUE,             -- SHA-256 of the applicant's status-link token
+    enrollment_no   TEXT NOT NULL COLLATE NOCASE,
+    full_name       TEXT NOT NULL,
+    email_enc       TEXT NOT NULL,
+    email_index     TEXT NOT NULL,
+    email_masked    TEXT NOT NULL,
+    mobile_enc      TEXT NOT NULL,
+    mobile_index    TEXT NOT NULL,
+    mobile_masked   TEXT NOT NULL,
+    course          TEXT NOT NULL CHECK (course IN ('MTECH_CS','MTECH_AIDS','BTECH_MTECH_CSE','MSC_CS','MSC_DFIS')),
+    batch           TEXT NOT NULL,
+    cgpa            REAL CHECK (cgpa IS NULL OR (cgpa >= 0 AND cgpa <= 10)),
+    password_hash   TEXT NOT NULL,
+    email_verified  INTEGER NOT NULL DEFAULT 0,
+    otp_hash        TEXT,
+    otp_expires_at  TEXT,
+    otp_attempts    INTEGER NOT NULL DEFAULT 0,
+    otp_sent_at     TEXT,
+    otp_sends       INTEGER NOT NULL DEFAULT 0,
+    status          TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+    reviewed_by     INTEGER REFERENCES users(id),
+    reviewed_at     TEXT,
+    decision_note   TEXT,
+    student_id      INTEGER REFERENCES students(id),
+    created_at      TEXT NOT NULL,
+    updated_at      TEXT NOT NULL
+);
+-- At most one pending request per enrollment number and per e-mail address.
+CREATE UNIQUE INDEX IF NOT EXISTS ux_reg_pending_enrollment ON registration_requests(enrollment_no) WHERE status = 'pending';
+CREATE UNIQUE INDEX IF NOT EXISTS ux_reg_pending_email ON registration_requests(email_index) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS ix_reg_status ON registration_requests(status, course);
 
 -- Tamper-evident, append-only audit trail. Each row carries an HMAC over the
 -- previous row's hash plus its own canonical content (a keyed hash chain).

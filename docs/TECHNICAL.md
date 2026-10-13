@@ -19,7 +19,8 @@ Browser ── HTTPS ──> Flask app ──> Domain services ──> SQLite
 
 | Table | Purpose | Notable constraints |
 |---|---|---|
-| `students` | Profile, registration, eligibility, CGPA | `placement_id` UNIQUE (immutable once issued); `mobile_enc`/`email_enc` ciphertext; `*_index` UNIQUE keyed blind indexes; CHECK constraints on every enumeration |
+| `students` | Profile, registration, eligibility, CGPA | `placement_id` UNIQUE (immutable once issued); `enrollment_no` UNIQUE when set (immutable, added by an idempotent migration for older databases); `mobile_enc`/`email_enc` ciphertext; `*_index` UNIQUE keyed blind indexes; CHECK constraints on every enumeration |
+| `registration_requests` | Self-service applications | enrollment number; encrypted e-mail and mobile with blind indexes; scrypt password hash (cleared once decided); OTP stored as an HMAC with expiry, attempt and send counters; partial unique indexes give one *pending* request per enrollment number and per e-mail |
 | `companies` | Recruiters | name UNIQUE (case-insensitive) |
 | `drives` | Recruitment drives | offer type I/F/IF; CTC range; category derived by the server; eligible programmes; minimum CGPA; response window |
 | `applications` | Student ↔ drive | UNIQUE(drive, student); JSON snapshot of the policy decision, including any approved exception |
@@ -62,22 +63,24 @@ Offers are always recorded, because they are facts. If an offer breaks policy, i
 | Audit and integrity | `hash_n = HMAC(audit_key, hash_{n-1} ‖ canonical(entry_n))`; append-only triggers; written in the same transaction as the change; before/after values with masked PII; verifier pinpoints the first broken entry; optimistic concurrency on offer updates |
 | Backup and recovery | SQLite online-backup snapshot → AES-256-GCM under a separate backup key; web "Verify restore" decrypts to a temporary file and checks `PRAGMA integrity_check` and the audit chain; `scripts/restore_backup.py` verifies before replacing the database |
 | Export | Officer/admin only; contact columns admin-only; mandatory purpose; formula-injection neutralisation; SHA-256 of the file recorded in the audit log and sent as a header |
+| Self-registration | Official-domain allow-list; uniqueness of enrollment number, e-mail and mobile across students, accounts and pending requests; 6-digit OTP from `secrets`, stored as an HMAC, 10-minute expiry, 5 attempts, 60 s resend cooldown, 5 sends; honeypot; per-IP rate limits; programme-scoped coordinator approval; transactional creation of the student and account; e-mail sent via `EmailMessage`, which rejects header injection |
 | Privacy and retention | Only the required fields; configurable retention period; anonymisation of archived records removes identifiers but keeps statistics; `secure_delete` pragma |
 
 Keys: `secret_key`, `field_key`, `index_key`, `audit_key` and `backup_key` (256-bit each). In production they come from `PG_*` environment variables supplied by a secrets manager. In development they are generated once in `instance/keys.json` with owner-only permissions.
 
 ## 5. Testing
 
-Run `python -m pytest -q tests`. All 86 tests pass, and the suite takes about 10 seconds.
+Run `python -m pytest -q tests`. All 114 tests pass, and the suite takes about 10 seconds.
 
 - `test_policy.py` (34): category boundaries; A+/A/B/C switching, including 11.25 vs 11.24 LPA; I/F/I+F restrictions; PPO acting as I+F; conflict modes; declined-offer counting; registration, eligibility, CGPA and debarment; completeness of explanations.
 - `test_security.py` (40): scrypt storage; lockout; uniform errors; rate limiting; SQL injection (login, search, filters); stored XSS; CSRF and cross-origin; IDOR; a student changing their own status or package; a forged apply request; acting for another student; coordinator and recruiter isolation; mass assignment; privilege escalation; MFA and replay; cookie flags; logout revocation; idle timeout; UA binding; session fixation; open redirect; encryption at rest; ciphertext swapping; contact-reveal logging; export controls; CSV injection; append-only audit; tamper detection; security headers; no leaked tracebacks; backup encryption and corruption detection; path traversal.
+- `test_registration.py` (28): submission validation and uniqueness, honeypot, rate limit, OTP lifecycle, coordinator scoping, approval, rejection, sign-in by enrollment number or e-mail.
 - `test_workflow.py` (12): officer registration under policy; recorded approval for review cases; three-drive debarment; excused absence; server-derived offer terms; deadline rule; expiry; reneging flag; unique-vs-offer statistics; audited policy change; anonymisation preserving statistics; guide access for every role.
 
 ## 6. Limitations
 
 - SQLite and the in-process rate limiter assume a single server. Production should use PostgreSQL and a shared rate-limit store (for example Redis).
 - Compensation fields are protected by access control and backup encryption, not field-level encryption (they are needed for aggregate statistics). Use storage-level encryption (TDE or an encrypted volume) in production.
-- No outbound notifications (email or SMS) yet. Deadlines are shown in the interface and enforced automatically.
+- E-mail is used for registration codes and decisions. Offer deadline reminders are not e-mailed yet, and there is no SMS.
 - Google Fonts are loaded from Google's CDN. For a fully offline deployment, self-host the font files and tighten the CSP.
 - The demo seed uses a shared demo password and refuses to run when `APP_ENV=production`.

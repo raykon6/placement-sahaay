@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from "macros.html" import csrf %}
+{% block title %}Registration status{% endblock %}
+{% block bare %}
+<div class="auth">
+  <section class="auth-aside hero" aria-label="Student Placement Cell, NFSU Gandhinagar">
+    <img class="hero-crest" src="{{ url_for('static', filename='img/nfsu-logo.png') }}" alt="" width="96" height="96">
+    <h1 class="hero-title">Student Placement Cell</h1>
+    <span class="hero-label">NFSU Gandhinagar</span>
+  </section>
+  <section class="auth-main">
+    <div class="auth-card wide">
+      <div>
+        <h2>Registration status</h2>
+        <p class="muted small mt-10">Bookmark this page to check your request. The link is private to you.</p>
+      </div>
+
+      {% set messages = pop_flashes() %}
+      {% if messages %}
+      <div class="flashes" role="status" aria-live="polite">
+        {% for cat, msg in messages %}<div class="flash flash-{{ cat }}"><span>{{ msg }}</span></div>{% endfor %}
+      </div>
+      {% endif %}
+
+      <ol class="steps" aria-label="Progress">
+        <li class="done"><b>1 · Submitted</b>{{ req.created_at|ist('%d %b, %H:%M') }}</li>
+        <li class="{{ 'done' if req.email_verified else ('current' if req.status == 'pending' else '') }}"><b>2 · E-mail</b>{{ 'Verified' if req.email_verified else ('Required' if require_verification else 'Optional') }}</li>
+        <li class="{{ {'pending': 'current', 'approved': 'done', 'rejected': 'failed'}[req.status] }}"><b>3 · Review</b>{{ req.status|label('request_status') }}</li>
+      </ol>
+
+      <dl class="dl">
+        <dt>Name</dt><dd>{{ req.full_name }}</dd>
+        <dt>Enrollment number</dt><dd class="mono">{{ req.enrollment_no }}</dd>
+        <dt>Official e-mail</dt><dd class="mono">{{ req.email_masked }}</dd>
+        <dt>Programme</dt><dd>{{ req.course|label('course_long') }} · {{ req.batch }}</dd>
+      </dl>
+
+      {% if req.status == 'approved' %}
+        <div class="notice notice-ok"><strong>Approved.</strong> Sign in with your enrollment number or official e-mail and the password you chose.</div>
+        <a class="btn btn-primary btn-block" href="{{ url_for('auth.login') }}">Go to sign in</a>
+      {% elif req.status == 'rejected' %}
+        <div class="notice notice-bad"><strong>Not approved.</strong> {{ req.decision_note }}</div>
+        <a class="btn btn-block" href="{{ url_for('register.form') }}">Submit a corrected request</a>
+      {% elif not req.email_verified %}
+        <section class="stack" aria-labelledby="otp-h">
+          <h3 id="otp-h">Verify your official e-mail{% if not require_verification %} <span class="req">(optional, speeds up approval)</span>{% endif %}</h3>
+          <p class="small muted">Enter the 6-digit code sent to {{ req.email_masked }}. Codes expire after {{ config.OTP_TTL_MINUTES }} minutes and can be used once.</p>
+          {% if outbox %}<div class="notice small"><strong>Development mode.</strong> E-mail delivery is not configured on this server, so messages are saved to the local outbox (<span class="mono">instance/outbox/</span>), visible to the administrator.</div>{% endif %}
+          {% if otp_error %}<div class="error-summary" role="alert" tabindex="-1"><h2>Verification failed</h2><p class="small">{{ otp_error }}</p></div>{% endif %}
+          <form class="form" method="post" action="{{ url_for('register.verify', token=token) }}" novalidate>
+            {{ csrf() }}
+            <div class="field">
+              <label for="f-code">Verification code</label>
+              <input class="input otp-input" id="f-code" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="7" autocomplete="one-time-code" required>
+            </div>
+            <div class="form-actions"><button class="btn btn-primary" type="submit">Verify e-mail</button></div>
+          </form>
+          <form method="post" action="{{ url_for('register.resend', token=token) }}">
+            {{ csrf() }}
+            <button class="link-btn small" type="submit">Send a new code</button>
+          </form>
+        </section>
+      {% else %}
+        <div class="notice notice-ok"><strong>E-mail verified.</strong> Your request is waiting for your placement coordinator. You will be e-mailed when it is decided.</div>
+      {% endif %}
+    </div>
+  </section>
+</div>
+{% endblock %}

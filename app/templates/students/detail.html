@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-head">
   <div>
-    <p class="breadcrumb"><a href="{{ url_for('students.index') }}">Students</a> / <span class="mono">{{ st.placement_id }}</span></p>
+    <p class="breadcrumb"><a href="{{ url_for('students.index') }}">Students</a> / <span class="mono">{{ st.placement_id }}</span>{% if st.enrollment_no %} · Enrollment <span class="mono">{{ st.enrollment_no }}</span>{% endif %}</p>
     <h1>{{ st.full_name }}</h1>
     <p class="lede">{{ st.course|label('course_long') }} · Batch {{ st.batch }}
       {% if st.archived %} · <span class="badge">Archived</span>{% endif %}{% if st.anonymized %} <span class="badge">Anonymised</span>{% endif %}</p>

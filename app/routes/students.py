@@ -14,7 +14,7 @@ from ..validators import ValidationError, reason, student_fields
 
 bp = Blueprint("students", __name__, url_prefix="/students")
 PAGE_SIZE = 25
-ALL_FIELDS = {"placement_id", "full_name", "mobile", "email", "course", "batch", "registration_status",
+ALL_FIELDS = {"placement_id", "enrollment_no", "full_name", "mobile", "email", "course", "batch", "registration_status",
               "eligibility_status", "cgpa", "remarks"}
 IMPORT_COLUMNS = ["placement_id", "full_name", "mobile", "email", "course", "batch",
                   "registration_status", "eligibility_status", "cgpa"]
@@ -23,7 +23,7 @@ IMPORT_COLUMNS = ["placement_id", "full_name", "mobile", "email", "course", "bat
 def editable_fields(user) -> set:
     """Field allow-list per role (server-side mass-assignment protection)."""
     if has_perm("student.write", user):
-        return ALL_FIELDS - {"placement_id"}  # Placement ID is immutable once issued
+        return ALL_FIELDS - {"placement_id", "enrollment_no"}  # identity keys are immutable once issued
     if has_perm("student.eligibility", user):
         return {"eligibility_status", "cgpa"}
     return set()
@@ -65,8 +65,8 @@ def index():
     q = (args.get("q") or "").strip()[:60]
     if q:
         like = "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
-        where.append("(full_name LIKE ? ESCAPE '\\' OR placement_id LIKE ? ESCAPE '\\')")
-        params += [like, like]
+        where.append("(full_name LIKE ? ESCAPE '\\' OR placement_id LIKE ? ESCAPE '\\' OR enrollment_no LIKE ? ESCAPE '\\')")
+        params += [like, like, like]
     archived = args.get("archived") == "1"
     where.append("archived = ?")
     params.append(1 if archived else 0)

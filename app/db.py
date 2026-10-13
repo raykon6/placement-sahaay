@@ -62,6 +62,16 @@ def transaction():
 def init_schema(conn: sqlite3.Connection):
     schema = (Path(__file__).parent / "schema.sql").read_text(encoding="utf-8")
     conn.executescript(schema)
+    _migrate(conn)
+
+
+def _migrate(conn: sqlite3.Connection):
+    """Additive, idempotent migrations for databases created by earlier versions."""
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(students)")}
+    if "enrollment_no" not in cols:
+        conn.execute("ALTER TABLE students ADD COLUMN enrollment_no TEXT COLLATE NOCASE")
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_students_enrollment ON students(enrollment_no)"
+                 " WHERE enrollment_no IS NOT NULL")
 
 
 def init_app(app):

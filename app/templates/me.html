@@ -6,7 +6,7 @@
   <div>
     <p class="eyebrow">Student portal</p>
     <h1>{{ st.full_name }}</h1>
-    <p class="lede"><span class="mono">{{ st.placement_id }}</span> · {{ st.course|label('course_long') }} · Batch {{ st.batch }}</p>
+    <p class="lede"><span class="mono">{{ st.placement_id }}</span>{% if st.enrollment_no %} · Enrollment <span class="mono">{{ st.enrollment_no }}</span>{% endif %} · {{ st.course|label('course_long') }} · Batch {{ st.batch }}</p>
   </div>
   {{ status_badge(status) }}
 </div>

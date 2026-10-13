@@ -5,7 +5,7 @@ from flask import Blueprint, current_app, g, redirect, render_template, request,
 
 from .. import audit
 from ..constants import now_iso, parse_ts, utcnow, TS_FMT
-from ..crypto import decrypt_field, encrypt_field
+from ..crypto import blind_index, decrypt_field, encrypt_field
 from ..db import execute, query, transaction
 from ..security import (end_session, flash, hash_password, login_required, new_totp_secret, password_problems,
                         rate_limit, revoke_user_sessions, safe_next, start_session, verify_password, verify_totp)
@@ -31,9 +31,13 @@ def login():
         return render_template("login.html", next=next_url, expired=request.args.get("expired"))
 
     rate_limit("login")
-    username = (request.form.get("username") or "").strip().lower()[:64]
+    username = (request.form.get("username") or "").strip().lower()[:254]
     password = request.form.get("password") or ""
     user = query("SELECT * FROM users WHERE username = ?", (username,), one=True)
+    if user is None and "@" in username:
+        # Students may sign in with the official e-mail linked to their record.
+        user = query("SELECT u.* FROM users u JOIN students s ON s.id = u.student_id WHERE s.email_index = ?",
+                     (blind_index(username, "email"),), one=True)
     cfg = current_app.config
 
     if user and user["locked_until"] and parse_ts(user["locked_until"]) > utcnow():

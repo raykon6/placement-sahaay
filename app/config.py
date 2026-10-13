@@ -31,6 +31,22 @@ class Config:
     LOGIN_RATE_PER_MINUTE = 10
 
     MAX_CONTENT_LENGTH = 1 * 1024 * 1024  # upload ceiling (CSV import)
+
+    # Self-service registration
+    OFFICIAL_EMAIL_DOMAINS = tuple(d.strip().lower() for d in
+                                   os.environ.get("PG_OFFICIAL_EMAIL_DOMAINS", "nfsu.ac.in").split(",") if d.strip())
+    REQUIRE_EMAIL_VERIFICATION = os.environ.get("PG_REQUIRE_EMAIL_VERIFICATION", "0") == "1"
+    OTP_TTL_MINUTES = 10
+    OTP_MAX_ATTEMPTS = 5
+    OTP_RESEND_SECONDS = 60
+    OTP_MAX_SENDS = 5
+
+    # Outbound mail (unset SMTP host = development outbox under instance/outbox)
+    SMTP_HOST = os.environ.get("PG_SMTP_HOST", "")
+    SMTP_PORT = int(os.environ.get("PG_SMTP_PORT", "587"))
+    SMTP_USER = os.environ.get("PG_SMTP_USER", "")
+    SMTP_PASSWORD = os.environ.get("PG_SMTP_PASSWORD", "")
+    MAIL_FROM = os.environ.get("PG_MAIL_FROM", "Placement Sahaay <no-reply@nfsu.ac.in>")
     TESTING = False
     DEBUG = False  # never expose the Werkzeug debugger
 

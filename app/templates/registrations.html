@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "macros.html" import csrf %}
+{% block title %}Registration requests{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Records</p>
+    <h1>Registration requests</h1>
+    <p class="lede">Students who registered themselves. Approving creates the student record with a new Placement ID, and a login linked to the enrollment number and official e-mail.{% if g.user.role == 'coordinator' %} You see requests for {{ g.user.course_scope|label('course_long') }} only.{% endif %}</p>
+  </div>
+  <nav class="actions" aria-label="Request status">
+    {% for k, v in statuses.items() %}
+    <a class="btn btn-sm{{ ' btn-primary' if status == k }}" href="{{ url_for('register.queue', status=k) }}"{% if status == k %} aria-current="page"{% endif %}>{{ v }}</a>
+    {% endfor %}
+  </nav>
+</div>
+
+{% if require_verification and status == 'pending' %}
+<div class="notice notice-warn section-gap"><strong>E-mail verification is required</strong> before a request can be approved (server setting).</div>
+{% endif %}
+
+<div class="stack">
+{% for item in items %}{% set r = item.req %}
+  <article class="card" aria-labelledby="rq-{{ r.id }}">
+    <div class="card-head">
+      <div>
+        <h2 id="rq-{{ r.id }}">{{ r.full_name }}</h2>
+        <p><span class="mono">{{ r.enrollment_no }}</span> · {{ r.course|label('course') }} · Batch {{ r.batch }} · submitted {{ r.created_at|ist }}</p>
+      </div>
+      <div class="actions">
+        {% if r.email_verified %}<span class="badge badge-ok">E-mail verified</span>{% else %}<span class="badge badge-review">E-mail not verified</span>{% endif %}
+        <span class="badge {{ {'pending': 'badge-accent', 'approved': 'badge-ok', 'rejected': 'badge-block'}[r.status] }}">{{ r.status|label('request_status') }}</span>
+      </div>
+    </div>
+    <div class="card-body stack">
+      <dl class="dl">
+        <dt>Official e-mail</dt><dd class="mono">{{ r.email_masked }}</dd>
+        <dt>Mobile</dt><dd class="mono">{{ r.mobile_masked }}</dd>
+        <dt>CGPA (self-reported)</dt><dd>{{ r.cgpa if r.cgpa is not none else '—' }}</dd>
+        {% if r.status != 'pending' %}
+        <dt>Decision</dt><dd>{{ r.status|label('request_status') }} by {{ r.reviewer or '—' }} · {{ r.reviewed_at|ist }}{% if r.decision_note %}<br>{{ r.decision_note }}{% endif %}</dd>
+        {% if r.student_id %}<dt>Student record</dt><dd><a href="{{ url_for('students.detail', student_id=r.student_id) }}">Open record</a></dd>{% endif %}
+        {% endif %}
+      </dl>
+      {% if item.conflicts %}
+      <div class="notice notice-bad" role="alert"><strong>Identity conflict.</strong> {{ item.conflicts.values()|join(' ') }}</div>
+      {% endif %}
+      {% if r.status == 'pending' %}
+      <div class="grid grid-2">
+        <form class="form" method="post" action="{{ url_for('register.approve', request_id=r.id) }}" data-confirm="Approve {{ r.full_name }} ({{ r.enrollment_no }})? A student record and login will be created.">
+          {{ csrf() }}
+          <div class="field"><label for="ap-{{ r.id }}">Approval note <span class="req">(optional)</span></label><input class="input" id="ap-{{ r.id }}" name="note" maxlength="300"></div>
+          <button class="btn btn-primary" type="submit"{% if item.conflicts or (require_verification and not r.email_verified) %} disabled{% endif %}>Approve</button>
+        </form>
+        <form class="form" method="post" action="{{ url_for('register.reject', request_id=r.id) }}" novalidate>
+          {{ csrf() }}
+          <div class="field"><label for="rj-{{ r.id }}">Reason shared with applicant</label><input class="input" id="rj-{{ r.id }}" name="reason" minlength="10" maxlength="300" required></div>
+          <button class="btn btn-danger" type="submit">Reject</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  </article>
+{% else %}
+  <div class="card"><div class="empty"><strong>No {{ status|label('request_status')|lower }} requests</strong>{{ 'New registrations will appear here.' if status == 'pending' else '' }}</div></div>
+{% endfor %}
+</div>
+{% endblock %}

@@ -15,7 +15,7 @@
 </div>
 
 <form class="filters" method="get" action="{{ url_for('students.index') }}" role="search" aria-label="Filter students">
-  <div class="field grow"><label for="q">Search</label><input class="input" id="q" name="q" type="search" value="{{ filters.get('q', '') }}" placeholder="Name or Placement ID" maxlength="60"></div>
+  <div class="field grow"><label for="q">Search</label><input class="input" id="q" name="q" type="search" value="{{ filters.get('q', '') }}" placeholder="Name, Placement ID or enrollment no." maxlength="60"></div>
   {% if g.user.role != 'coordinator' %}
   <div class="field"><label for="fc">Programme</label>
     <select class="select" id="fc" name="course"><option value="">All</option>{% for k, v in COURSE_SHORT.items() %}<option value="{{ k }}"{% if course == k %} selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>

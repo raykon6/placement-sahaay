@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from "macros.html" import csrf, field, select, error_summary %}
+{% block title %}Student registration{% endblock %}
+{% block bare %}
+<div class="auth">
+  <section class="auth-aside hero" aria-label="Student Placement Cell, NFSU Gandhinagar">
+    <img class="hero-crest" src="{{ url_for('static', filename='img/nfsu-logo.png') }}" alt="" width="96" height="96">
+    <h1 class="hero-title">Student Placement Cell</h1>
+    <span class="hero-label">NFSU Gandhinagar</span>
+  </section>
+  <section class="auth-main">
+    <div class="auth-card wide">
+      <div>
+        <h2>Register for placements</h2>
+        <p class="muted small mt-10">Your request is reviewed by your programme's placement coordinator. Your enrollment number and official e-mail become your identity on the platform, and each can be registered only once.</p>
+      </div>
+      <form class="form" method="post" action="{{ url_for('register.form') }}" novalidate>
+        {{ csrf() }}
+        {{ error_summary(errors) }}
+        <div class="hp-field" aria-hidden="true">
+          <label for="f-website">Leave this field empty</label>
+          <input id="f-website" name="website" type="text" tabindex="-1" autocomplete="off">
+        </div>
+        <div class="form-grid">
+          {{ field('enrollment_no', 'Enrollment number', form, errors, required=True, hint='As printed on your university ID card', attrs='maxlength="24" autocapitalize="characters" spellcheck="false"') }}
+          {{ field('full_name', 'Full name', form, errors, required=True, attrs='maxlength="100"', autocomplete="name") }}
+          {{ field('email', 'Official e-mail', form, errors, type='email', required=True, hint='Your university address (@' ~ domains|join(', @') ~ ')', attrs='maxlength="254" spellcheck="false"', autocomplete="email") }}
+          {{ field('mobile', 'Mobile number', form, errors, type='tel', required=True, hint='10-digit Indian mobile', attrs='maxlength="16" inputmode="tel"', autocomplete="tel") }}
+          {{ select('course', 'Programme', COURSES, form, errors, blank='Select programme') }}
+          {{ field('batch', 'Batch', form, errors, required=True, hint='e.g. 2025-27', attrs='maxlength="9"') }}
+          {{ field('cgpa', 'Current CGPA', form, errors, type='number', hint='Verified later by your coordinator', attrs='step="0.01" min="0" max="10" inputmode="decimal"') }}
+          <div class="field" aria-hidden="true"></div>
+          {{ field('password', 'Choose a password', {}, errors, type='password', required=True, hint='At least 12 characters; not your enrollment number', attrs='maxlength="128"', autocomplete="new-password") }}
+          {{ field('confirm_password', 'Confirm password', {}, errors, type='password', required=True, attrs='maxlength="128"', autocomplete="new-password") }}
+        </div>
+        <div class="field">
+          <label class="check" for="f-consent"><input type="checkbox" id="f-consent" name="consent" value="1"{% if form.get('consent') == '1' %} checked{% endif %}{% if errors.get('consent') %} aria-invalid="true" aria-describedby="e-consent"{% endif %}> I confirm these details are correct and consent to their use by the Student Placement Cell for placement purposes.</label>
+          {% if errors.get('consent') %}<span class="error-text" id="e-consent">{{ errors.consent }}</span>{% endif %}
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Submit registration request</button>
+      </form>
+      <p class="small muted">Already registered? <a href="{{ url_for('auth.login') }}">Sign in</a> with your enrollment number or official e-mail.</p>
+    </div>
+  </section>
+</div>
+{% endblock %}

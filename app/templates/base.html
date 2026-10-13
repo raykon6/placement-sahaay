@@ -20,7 +20,7 @@
     <span class="tag"><b>NFSU</b><span>NFSU Gandhinagar · Student Placement Cell · Session 2026–27</span></span>
     {% if g.user %}
     <div class="who">
-      <span><strong>{{ g.user.display_name }}</strong> · {{ g.user.role|label('role') }}{% if g.user.course_scope %} · {{ g.user.course_scope|label('course') }}{% endif %}</span>
+      <span><strong>{{ g.user.display_name }}</strong> · {{ g.user.role|label('role') }}{% if g.user.course_scope and g.user.course_scope|label('course') not in g.user.display_name %} · {{ g.user.course_scope|label('course') }}{% endif %}</span>
       <span class="sep" aria-hidden="true"></span>
       <a href="{{ url_for('auth.account') }}">Account security</a>
       <span class="sep" aria-hidden="true"></span>
@@ -58,8 +58,9 @@
       <ul>
         {% if has_perm('dashboard') %}
           {{ link('main.dashboard', 'Dashboard') }}
-          {% call group('Records', ['students.', 'drives.', 'offers.', 'reports.index']) %}
+          {% call group('Records', ['students.', 'drives.', 'offers.', 'reports.index', 'register.queue']) %}
             {{ link('students.index', 'Students', 'students.') }}
+            {% if has_perm('registration.review') %}{{ link('register.queue', 'Registration requests', 'register.queue', pending_registrations) }}{% endif %}
             {{ link('drives.index', 'Recruitment drives', 'drives.') }}
             {{ link('offers.index', 'Offers', 'offers.') }}
             {{ link('reports.index', 'Reports', 'reports.index') }}
@@ -71,11 +72,12 @@
             {% if has_perm('policy.edit') %}{{ link('policy.settings', 'Policy settings') }}{% endif %}
           {% endcall %}
           {% if has_perm('audit.read') or has_perm('export') %}
-          {% call group('Governance', ['admin.', 'reports.export']) %}
+          {% call group('Governance', ['admin.', 'reports.export', 'register.outbox']) %}
             {% if has_perm('export') %}{{ link('reports.export', 'Secure export') }}{% endif %}
             {% if has_perm('audit.read') %}{{ link('admin.audit_log', 'Audit trail', 'admin.audit') }}{% endif %}
             {% if has_perm('user.manage') %}{{ link('admin.users', 'Users and roles', 'admin.user') }}{% endif %}
             {% if has_perm('backup.manage') %}{{ link('admin.backups', 'Backups', 'admin.backup') }}{% endif %}
+            {% if has_perm('outbox.read') and outbox_enabled %}{{ link('register.outbox', 'Development outbox') }}{% endif %}
           {% endcall %}
           {% endif %}
         {% elif has_perm('self.portal') %}

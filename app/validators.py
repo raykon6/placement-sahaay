@@ -7,6 +7,7 @@ from .constants import (ACCEPTANCE, COURSES, ELIGIBILITY, EVENTS, JOINING, NOC, 
                         REGISTRATION)
 
 PLACEMENT_ID_RE = re.compile(r"^[A-Z0-9][A-Z0-9-]{3,23}$")
+ENROLLMENT_RE = re.compile(r"^[A-Z0-9]{6,20}$")
 NAME_RE = re.compile(r"^[A-Za-z][A-Za-z .'\-]{1,99}$")
 MOBILE_RE = re.compile(r"^[6-9]\d{9}$")
 EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+\-]{1,64}@[A-Za-z0-9.\-]{1,190}\.[A-Za-z]{2,24}$")
@@ -32,6 +33,15 @@ def normalise_mobile(raw: str) -> str:
     elif digits.startswith("0") and len(digits) == 11:
         digits = digits[1:]
     return digits
+
+
+def normalise_enrollment(raw: str) -> str:
+    return re.sub(r"[\s\-/]", "", raw or "").upper()
+
+
+def is_official_email(email: str, domains) -> bool:
+    domain = email.rsplit("@", 1)[-1].lower()
+    return any(domain == d or domain.endswith("." + d) for d in domains)
 
 
 def choice(form, key, options, errors, label, required=True):
@@ -87,6 +97,11 @@ def student_fields(form, creating: bool, allowed: set) -> dict:
         if not PLACEMENT_ID_RE.match(pid):
             errors["placement_id"] = "Placement ID must be 4–24 characters: A–Z, 0–9 and hyphens."
         data["placement_id"] = pid
+    if creating and "enrollment_no" in allowed:
+        enrol = normalise_enrollment(_text(form, "enrollment_no", 24))
+        if enrol and not ENROLLMENT_RE.match(enrol):
+            errors["enrollment_no"] = "Enrollment number must be 6–20 letters or digits."
+        data["enrollment_no"] = enrol or None
     if "full_name" in allowed:
         name = re.sub(r"\s+", " ", _text(form, "full_name", 100))
         if not NAME_RE.match(name):
@@ -205,3 +220,28 @@ def reason(form, key="reason", min_len=10, label="a reason") -> str:
 
 def event_choice(form, errors):
     return choice(form, "event", EVENTS, errors, "event")
+
+
+def registration_fields(form, domains) -> dict:
+    """Validate the public self-registration form."""
+    errors, data = {}, {}
+    try:
+        data = student_fields(form, creating=False,
+                              allowed={"full_name", "mobile", "email", "course", "batch", "cgpa"})
+    except ValidationError as exc:
+        errors.update(exc.errors)
+    enrol = normalise_enrollment(_text(form, "enrollment_no", 24))
+    if not ENROLLMENT_RE.match(enrol):
+        errors["enrollment_no"] = "Enter your enrollment number exactly as issued (6–20 letters or digits)."
+    data["enrollment_no"] = enrol
+    email = (form.get("email") or "").strip().lower()
+    if "email" not in errors and not is_official_email(email, domains):
+        errors["email"] = "Use your official university e-mail address (" + ", ".join("@" + d for d in domains) + ")."
+    if form.get("consent") != "1":
+        errors["consent"] = "Confirm that the details are correct and consent to their use for placement."
+    data["password"] = form.get("password") or ""
+    if data["password"] != (form.get("confirm_password") or ""):
+        errors["confirm_password"] = "Passwords do not match."
+    if errors:
+        raise ValidationError(errors)
+    return data
